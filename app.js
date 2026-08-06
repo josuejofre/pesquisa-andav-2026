@@ -9,6 +9,15 @@ const STORAGE_KEYS = {
   FIREBASE_CONFIG: 'syngenta_andav_2026_firebase_config'
 };
 
+const DEFAULT_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAedlN99T1182bU3-YubQ1l_LujOnfpPZc",
+  authDomain: "pesquisa-andav-2026.firebaseapp.com",
+  projectId: "pesquisa-andav-2026",
+  storageBucket: "pesquisa-andav-2026.firebasestorage.app",
+  messagingSenderId: "856001913981",
+  appId: "1:856001913981:web:2bce4dc798d5b6b1fe3d14"
+};
+
 // Estado da Aplicação
 const appState = {
   mode: 'essencial', // 'essencial' | 'completo'
@@ -49,15 +58,16 @@ function initApp() {
    1. FIREBASE FIRESTORE INITIALIZATION (OPÇÃO 2)
    ========================================================================== */
 function loadSavedConfig() {
-  const savedConfig = localStorage.getItem(STORAGE_KEYS.FIREBASE_CONFIG);
-  if (savedConfig) {
+  const savedConfigStr = localStorage.getItem(STORAGE_KEYS.FIREBASE_CONFIG);
+  let cfg = DEFAULT_FIREBASE_CONFIG;
+  if (savedConfigStr) {
     try {
-      const cfg = JSON.parse(savedConfig);
-      document.getElementById('firebaseApiKey').value = cfg.apiKey || '';
-      document.getElementById('firebaseProjectId').value = cfg.projectId || '';
-      document.getElementById('firebaseAppId').value = cfg.appId || '';
+      cfg = JSON.parse(savedConfigStr);
     } catch (e) {}
   }
+  document.getElementById('firebaseApiKey').value = cfg.apiKey || '';
+  document.getElementById('firebaseProjectId').value = cfg.projectId || '';
+  document.getElementById('firebaseAppId').value = cfg.appId || '';
 
   const savedSession = localStorage.getItem(STORAGE_KEYS.SESSION);
   if (savedSession) {
@@ -72,11 +82,17 @@ function loadSavedConfig() {
 }
 
 function initFirebaseIfConfigured() {
-  const savedConfig = localStorage.getItem(STORAGE_KEYS.FIREBASE_CONFIG);
-  if (!savedConfig || typeof firebase === 'undefined') return;
+  if (typeof firebase === 'undefined') return;
+
+  const savedConfigStr = localStorage.getItem(STORAGE_KEYS.FIREBASE_CONFIG);
+  let config = DEFAULT_FIREBASE_CONFIG;
+  if (savedConfigStr) {
+    try {
+      config = JSON.parse(savedConfigStr);
+    } catch (e) {}
+  }
 
   try {
-    const config = JSON.parse(savedConfig);
     if (config.apiKey && config.projectId) {
       if (!firebase.apps.length) {
         appState.firebaseApp = firebase.initializeApp(config);
