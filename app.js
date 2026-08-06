@@ -1,13 +1,16 @@
 /* ==========================================================================
    PESQUISA ANDAV 2026 — ECOSSISTEMA SYNGENTA
-   Opção 2: Firebase Firestore Real-Time & Offline Persistence Engine
+   Opção 2: Firebase Firestore Real-Time & Offline Persistence Engine + Gemini AI
    ========================================================================== */
 
 const STORAGE_KEYS = {
   RESPONSES: 'syngenta_andav_2026_responses',
   SESSION: 'syngenta_andav_2026_session',
-  FIREBASE_CONFIG: 'syngenta_andav_2026_firebase_config'
+  FIREBASE_CONFIG: 'syngenta_andav_2026_firebase_config',
+  GEMINI_KEY: 'syngenta_andav_2026_gemini_key'
 };
+
+const DEFAULT_GEMINI_KEY = "AIzaSyBmXmNccfXx1Dcgycybji2ZTHqLenB7f3U";
 
 const DEFAULT_FIREBASE_CONFIG = {
   apiKey: "AIzaSyAedlN99T1182bU3-YubQ1l_LujOnfpPZc",
@@ -27,6 +30,8 @@ const appState = {
   firebaseApp: null,
   db: null,
   isFirebaseActive: false,
+  geminiApiKey: '',
+  activeRecorders: {},
   p3State: {
     acessa_agro: null,
     syde: null,
@@ -50,12 +55,13 @@ function initApp() {
   loadSavedConfig();
   initFirebaseIfConfigured();
   bindEvents();
+  initVoiceRecorders();
   updateSyncStatusBadge();
   updateSavedCountModal();
 }
 
 /* ==========================================================================
-   1. FIREBASE FIRESTORE INITIALIZATION (OPÇÃO 2)
+   1. INICIALIZAÇÃO DE CREDENCIAIS (FIREBASE & GEMINI AI)
    ========================================================================== */
 function loadSavedConfig() {
   const savedConfigStr = localStorage.getItem(STORAGE_KEYS.FIREBASE_CONFIG);
@@ -68,6 +74,11 @@ function loadSavedConfig() {
   document.getElementById('firebaseApiKey').value = cfg.apiKey || '';
   document.getElementById('firebaseProjectId').value = cfg.projectId || '';
   document.getElementById('firebaseAppId').value = cfg.appId || '';
+
+  const savedGeminiKey = localStorage.getItem(STORAGE_KEYS.GEMINI_KEY) || DEFAULT_GEMINI_KEY;
+  appState.geminiApiKey = savedGeminiKey;
+  const geminiInp = document.getElementById('geminiApiKey');
+  if (geminiInp) geminiInp.value = savedGeminiKey;
 
   const savedSession = localStorage.getItem(STORAGE_KEYS.SESSION);
   if (savedSession) {
@@ -102,7 +113,7 @@ function initFirebaseIfConfigured() {
       
       appState.db = firebase.firestore();
       
-      // Habilitar Persistência Offline Nativas do Firestore
+      // Persistência Offline Nativa Firestore
       appState.db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
         if (err.code == 'failed-precondition') {
           console.warn('[Firebase] Persistência limitada a uma aba.');
@@ -140,16 +151,19 @@ function bindEvents() {
   document.getElementById('newSurveyBtn').addEventListener('click', resetSurveyForm);
 
   document.getElementById('openSettingsBtn').addEventListener('click', openSettingsModal);
+  document.getElementById('openReportsHeaderBtn').addEventListener('click', openReportsModal);
   document.getElementById('syncStatusBadge').addEventListener('click', openSettingsModal);
   document.getElementById('closeSettingsBtn').addEventListener('click', closeSettingsModal);
   
   document.getElementById('tabEndpointBtn').addEventListener('click', () => switchTab('endpoint'));
+  document.getElementById('tabReportsBtn').addEventListener('click', () => switchTab('reports'));
   document.getElementById('tabDataBtn').addEventListener('click', () => switchTab('data'));
 
   document.getElementById('saveApiConfigBtn').addEventListener('click', saveFirebaseConfig);
   document.getElementById('testApiBtn').addEventListener('click', testFirebaseConnection);
   document.getElementById('manualSyncBtn').addEventListener('click', forceManualSync);
   document.getElementById('exportCsvBtn').addEventListener('click', exportDataAsCSV);
+  document.getElementById('exportReportsCsvBtn').addEventListener('click', exportDataAsCSV);
   document.getElementById('exportJsonBtn').addEventListener('click', exportDataAsJSON);
   document.getElementById('clearDataBtn').addEventListener('click', clearLocalData);
 
@@ -163,7 +177,235 @@ function bindEvents() {
 }
 
 /* ==========================================================================
-   2. NAVEGAÇÃO & BLOCOS
+   2. SISTEMA DE GRAVAÇÃO E TRANSCRIÇÃO DE VOZ (WEB SPEECH + GEMINI AI)
+   ========================================================================== */
+function initVoiceRecorders() {
+  const form = document.getElementById('surveyForm');
+  if (!form) return;
+
+  const textFields = form.querySelectorAll('textarea, input[type="text"]');
+  textFields.forEach(field => {
+    if (!field.id || field.dataset.hasVoiceBtn) return;
+    field.dataset.hasVoiceBtn = "true";
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'voice-rec-btn';
+    btn.id = `voice_btn_${field.id}`;
+    btn.innerHTML = '🎙️ Gravar Voz';
+    btn.title = 'Clique para gravar áudio e transcrever o texto neste campo';
+
+    // Posicionar o botão acima ou ao lado do campo
+    const parent = field.parentElement;
+    if (parent) {
+      let labelWrapper = parent.querySelector('.label-voice-wrapper');
+      if (!labelWrapper) {
+        labelWrapper = document.createElement('div');
+        labelWrapper.className = 'label-voice-wrapper';
+
+        const label = parent.querySelector('label');
+        if (label) {
+          label.parentNode.insertBefore(labelWrapper, label);
+          labelWrapper.appendChild(label);
+        } else {
+          field.parentNode.insertBefore(labelWrapper, field);
+        }
+      }
+      labelWrapper.appendChild(btn);
+    }
+
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      toggleVoiceRecording(field, btn);
+    });
+  });
+}
+
+async function toggleVoiceRecording(fieldEl, btnEl) {
+  const fieldId = fieldEl.id;
+
+  if (appState.activeRecorders[fieldId]) {
+    stopVoiceRecording(fieldId);
+  } else {
+    startVoiceRecording(fieldEl, btnEl);
+  }
+}
+
+async function startVoiceRecording(fieldEl, btnEl) {
+  const fieldId = fieldEl.id;
+  
+  let recInstance = {
+    fieldEl,
+    btnEl,
+    recognition: null,
+    mediaRecorder: null,
+    audioChunks: [],
+    timerInterval: null,
+    seconds: 0,
+    webSpeechText: ''
+  };
+
+  btnEl.classList.add('recording');
+  btnEl.innerHTML = '⏹️ 00:00 Gravando... (Clique p/ parar)';
+
+  recInstance.timerInterval = setInterval(() => {
+    recInstance.seconds++;
+    const mins = String(Math.floor(recInstance.seconds / 60)).padStart(2, '0');
+    const secs = String(recInstance.seconds % 60).padStart(2, '0');
+    btnEl.innerHTML = `⏹️ ${mins}:${secs} Gravando... (Clique p/ parar)`;
+  }, 1000);
+
+  // 1. Tentar Web Speech API Nativinho do Navegador (Real-time pt-BR)
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SpeechRecognition) {
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'pt-BR';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+
+      recognition.onresult = (event) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        recInstance.webSpeechText = transcript;
+      };
+
+      recognition.start();
+      recInstance.recognition = recognition;
+    } catch (e) {
+      console.warn('[Web Speech API] Erro ao iniciar:', e);
+    }
+  }
+
+  // 2. Gravação de Áudio via MediaRecorder para Gemini API
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recInstance.audioChunks.push(event.data);
+        }
+      };
+
+      mediaRecorder.start(250);
+      recInstance.mediaRecorder = mediaRecorder;
+      recInstance.audioStream = stream;
+    } catch (e) {
+      console.warn('[MediaRecorder] Microfone não acessível para gravação de áudio:', e);
+    }
+  }
+
+  appState.activeRecorders[fieldId] = recInstance;
+}
+
+async function stopVoiceRecording(fieldId) {
+  const rec = appState.activeRecorders[fieldId];
+  if (!rec) return;
+
+  clearInterval(rec.timerInterval);
+  const { fieldEl, btnEl, recognition, mediaRecorder, audioStream, webSpeechText } = rec;
+
+  if (recognition) {
+    try { recognition.stop(); } catch (e) {}
+  }
+
+  let audioBlob = null;
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    audioBlob = await new Promise((resolve) => {
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(rec.audioChunks, { type: 'audio/webm' });
+        resolve(blob);
+      };
+      mediaRecorder.stop();
+    });
+  }
+
+  if (audioStream) {
+    audioStream.getTracks().forEach(track => track.stop());
+  }
+
+  delete appState.activeRecorders[fieldId];
+
+  // Processar Transcrição
+  btnEl.classList.remove('recording');
+  btnEl.classList.add('processing');
+  btnEl.innerHTML = '⏳ Transcrevendo...';
+
+  let finalTranscript = webSpeechText.trim();
+
+  // Se Gemini API Key estiver configurada e tivermos áudio gravado, transcrever via Gemini AI
+  if (appState.geminiApiKey && audioBlob && audioBlob.size > 1000) {
+    try {
+      btnEl.innerHTML = '✨ Transcrevendo via Gemini AI...';
+      const geminiText = await transcribeAudioWithGemini(audioBlob, appState.geminiApiKey);
+      if (geminiText) {
+        finalTranscript = geminiText;
+      }
+    } catch (err) {
+      console.error('[Gemini AI Transcribe Error]', err);
+    }
+  }
+
+  if (finalTranscript) {
+    const currentVal = fieldEl.value.trim();
+    fieldEl.value = currentVal ? `${currentVal} ${finalTranscript}` : finalTranscript;
+    fieldEl.dispatchEvent(new Event('input', { bubbles: true }));
+    fieldEl.dispatchEvent(new Event('change', { bubbles: true }));
+
+    btnEl.innerHTML = '✅ Transcrito!';
+    setTimeout(() => {
+      btnEl.classList.remove('processing');
+      btnEl.innerHTML = '🎙️ Gravar Voz';
+    }, 2000);
+  } else {
+    btnEl.classList.remove('processing');
+    btnEl.innerHTML = '⚠️ Não capturado. Tente de novo';
+    setTimeout(() => {
+      btnEl.innerHTML = '🎙️ Gravar Voz';
+    }, 2500);
+  }
+}
+
+async function transcribeAudioWithGemini(audioBlob, apiKey) {
+  const arrayBuffer = await audioBlob.arrayBuffer();
+  const base64Audio = btoa(
+    new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+  );
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{
+        parts: [
+          { text: "Transcreva o áudio em português (pt-BR) fornecido durante a pesquisa ANDAV Syngenta. Retorne EXATAMENTE e APENAS o texto falado, corrigindo pontuação básica." },
+          { inlineData: { mimeType: audioBlob.type || "audio/webm", data: base64Audio } }
+        ]
+      }]
+    })
+  });
+
+  if (!response.ok) {
+    const errData = await response.json();
+    throw new Error(errData.error?.message || 'Erro na API Gemini');
+  }
+
+  const data = await response.json();
+  if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+    return data.candidates[0].content.parts[0].text.trim();
+  }
+  return '';
+}
+
+
+/* ==========================================================================
+   3. NAVEGAÇÃO & BLOCOS
    ========================================================================== */
 function selectMode(mode) {
   appState.mode = mode;
@@ -209,6 +451,7 @@ function startSurveySession() {
 
   evaluateConditionalQuestions();
   updateProgressBar();
+  initVoiceRecorders();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -237,7 +480,7 @@ function continueToCompletoPath() {
 }
 
 /* ==========================================================================
-   3. RAMIFICAÇÃO CONDICIONAL
+   4. RAMIFICAÇÃO CONDICIONAL
    ========================================================================== */
 function handleP3Change() {
   appState.p3State.acessa_agro = getRadioValue('p3_acessa_agro');
@@ -317,7 +560,7 @@ function updateProgressBar() {
 }
 
 /* ==========================================================================
-   4. ENVIO PARA FIREBASE FIRESTORE & FALLBACK LOCAL
+   5. ENVIO PARA FIREBASE FIRESTORE & ARMAZENAMENTO LOCAL
    ========================================================================== */
 async function handleFormSubmit(e) {
   e.preventDefault();
@@ -407,7 +650,6 @@ async function handleFormSubmit(e) {
 
   saveResponseLocally(payload);
 
-  // Tentar gravação no Firebase Firestore
   const syncedSuccess = await sendResponseToFirebase(payload);
   if (syncedSuccess) {
     payload.sync_status = 'synced';
@@ -451,8 +693,6 @@ async function sendResponseToFirebase(payload) {
       return false;
     }
   }
-
-  // Se o Firebase não estiver configurado ainda, opera no modo de simulação
   console.log('[Simulação Firebase] Dados salvos localmente.');
   return true;
 }
@@ -506,7 +746,7 @@ function resetSurveyForm() {
 }
 
 /* ==========================================================================
-   5. GERENCIADOR DE DADOS E CONFIGURAÇÃO FIREBASE
+   6. GERENCIADOR DE DADOS, MODAIS E ABA DE RELATÓRIOS & ANALYTICS
    ========================================================================== */
 function getRadioValue(name) {
   const checked = document.querySelector(`input[name="${name}"]:checked`);
@@ -538,26 +778,51 @@ function openSettingsModal() {
   updateSavedCountModal();
 }
 
+function openReportsModal() {
+  openSettingsModal();
+  switchTab('reports');
+}
+
 function closeSettingsModal() {
   document.getElementById('settingsModal').style.display = 'none';
 }
 
 function switchTab(tab) {
   document.getElementById('tabEndpointBtn').classList.toggle('active', tab === 'endpoint');
+  document.getElementById('tabReportsBtn').classList.toggle('active', tab === 'reports');
   document.getElementById('tabDataBtn').classList.toggle('active', tab === 'data');
+
   document.getElementById('tabEndpointContent').style.display = tab === 'endpoint' ? 'block' : 'none';
+  document.getElementById('tabReportsContent').style.display = tab === 'reports' ? 'block' : 'none';
   document.getElementById('tabDataContent').style.display = tab === 'data' ? 'block' : 'none';
+
+  if (tab === 'reports') {
+    renderReportsTab();
+  }
+  if (tab === 'data') {
+    updateSavedCountModal();
+  }
 }
 
 function saveFirebaseConfig() {
   const apiKey = document.getElementById('firebaseApiKey').value.trim();
   const projectId = document.getElementById('firebaseProjectId').value.trim();
   const appId = document.getElementById('firebaseAppId').value.trim();
+  const geminiKey = document.getElementById('geminiApiKey').value.trim();
 
   const config = { apiKey, projectId, appId };
   localStorage.setItem(STORAGE_KEYS.FIREBASE_CONFIG, JSON.stringify(config));
+
+  if (geminiKey) {
+    localStorage.setItem(STORAGE_KEYS.GEMINI_KEY, geminiKey);
+    appState.geminiApiKey = geminiKey;
+  } else {
+    localStorage.removeItem(STORAGE_KEYS.GEMINI_KEY);
+    appState.geminiApiKey = '';
+  }
+
   initFirebaseIfConfigured();
-  alert('Credenciais do Firebase salvas!');
+  alert('Credenciais do Firebase e chave da API Gemini salvas!');
 }
 
 async function testFirebaseConnection() {
@@ -576,6 +841,118 @@ async function testFirebaseConnection() {
     resultBox.style.color = 'var(--accent-yellow)';
     resultBox.textContent = '⚠️ Preencha a API Key e o Project ID do Firebase para ativar o banco em nuvem real.';
   }
+}
+
+/* RENDERIZADOR DO PAINEL DE RELATÓRIOS & ANALYTICS */
+function renderReportsTab() {
+  const responses = getSavedResponses();
+  const total = responses.length;
+
+  document.getElementById('kpiTotalCount').textContent = total;
+
+  if (total === 0) {
+    document.getElementById('kpiCompletoPct').textContent = '0%';
+    document.getElementById('kpiCompletoCount').textContent = '0 entrevistas';
+    document.getElementById('kpiEssencialPct').textContent = '0%';
+    document.getElementById('kpiEssencialCount').textContent = '0 entrevistas';
+    document.getElementById('kpiAvgDuration').textContent = '0s';
+    
+    document.getElementById('p1DistributionList').innerHTML = '<p class="text-muted text-sm">Nenhuma resposta gravada até o momento.</p>';
+    document.getElementById('p3DistributionGrid').innerHTML = '<p class="text-muted text-sm">Nenhuma resposta gravada até o momento.</p>';
+    document.getElementById('p4DistributionList').innerHTML = '<p class="text-muted text-sm">Sem dados.</p>';
+    document.getElementById('p5DistributionList').innerHTML = '<p class="text-muted text-sm">Sem dados.</p>';
+    return;
+  }
+
+  // KPIs de Modo
+  const completoCount = responses.filter(r => r.metadata.modo_aplicacao === 'completo').length;
+  const essencialCount = responses.filter(r => r.metadata.modo_aplicacao === 'essencial').length;
+  const avgDuration = Math.round(responses.reduce((sum, r) => sum + (r.metadata.duracao_segundos || 0), 0) / total);
+
+  document.getElementById('kpiCompletoPct').textContent = `${Math.round((completoCount / total) * 100)}%`;
+  document.getElementById('kpiCompletoCount').textContent = `${completoCount} entrevistas`;
+  document.getElementById('kpiEssencialPct').textContent = `${Math.round((essencialCount / total) * 100)}%`;
+  document.getElementById('kpiEssencialCount').textContent = `${essencialCount} entrevistas`;
+  document.getElementById('kpiAvgDuration').textContent = `${avgDuration}s`;
+
+  // Gráfico P1 (Atividades)
+  const p1Counts = {};
+  responses.forEach(r => {
+    const act = r.bloco_0_essencial.p1_atividade || 'Não especificado';
+    p1Counts[act] = (p1Counts[act] || 0) + 1;
+  });
+  renderBarList('p1DistributionList', p1Counts, total);
+
+  // Gráfico P3 (Matriz Plataformas)
+  const p3Grid = document.getElementById('p3DistributionGrid');
+  p3Grid.innerHTML = '';
+  const platforms = ['acessa_agro', 'syde', 'smart_engage', 'cropwise'];
+  
+  platforms.forEach(platKey => {
+    const counts = { 'uso_atualmente': 0, 'conheco_nunca_usei': 0, 'ja_usei_parei': 0, 'nao_conheco': 0 };
+    responses.forEach(r => {
+      const val = r.bloco_0_essencial.p3_matriz?.[platKey];
+      if (val && counts[val] !== undefined) counts[val]++;
+    });
+
+    const platBox = document.createElement('div');
+    platBox.className = 'sub-report-box';
+    platBox.innerHTML = `<h5>${PLATFORM_NAMES[platKey]}</h5>`;
+    const listDiv = document.createElement('div');
+    renderBarListInContainer(listDiv, {
+      'Uso Atualmente': counts.uso_atualmente,
+      'Conheço, nunca usei': counts.conheco_nunca_usei,
+      'Já usei, parei': counts.ja_usei_parei,
+      'Não conheço': counts.nao_conheco
+    }, total);
+    platBox.appendChild(listDiv);
+    p3Grid.appendChild(platBox);
+  });
+
+  // Gráficos P4 e P5
+  const p4Counts = {};
+  const p5Counts = {};
+  responses.forEach(r => {
+    const p4 = r.bloco_0_essencial.p4_dor_compra;
+    if (p4) p4Counts[p4] = (p4Counts[p4] || 0) + 1;
+    const p5 = r.bloco_0_essencial.p5_dor_credito;
+    if (p5) p5Counts[p5] = (p5Counts[p5] || 0) + 1;
+  });
+
+  renderBarList('p4DistributionList', p4Counts, total);
+  renderBarList('p5DistributionList', p5Counts, total);
+}
+
+function renderBarList(containerId, countsObj, total) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  renderBarListInContainer(container, countsObj, total);
+}
+
+function renderBarListInContainer(container, countsObj, total) {
+  const keys = Object.keys(countsObj);
+  if (keys.length === 0) {
+    container.innerHTML = '<p class="text-muted text-sm">Sem dados registrados.</p>';
+    return;
+  }
+
+  keys.forEach(key => {
+    const count = countsObj[key];
+    const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+
+    const row = document.createElement('div');
+    row.className = 'bar-row';
+    row.innerHTML = `
+      <div class="bar-info">
+        <span class="bar-name">${key}</span>
+        <span class="bar-count">${count} (${pct}%)</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width: ${pct}%;"></div>
+      </div>
+    `;
+    container.appendChild(row);
+  });
 }
 
 function updateSavedCountModal() {
@@ -611,6 +988,7 @@ async function forceManualSync() {
   alert('Sincronização manual com o Firebase finalizada.');
 }
 
+/* EXPORTAÇÃO COMPLETA E ORGANIZADA EM CSV (EXCEL BOM UTF-8) */
 function exportDataAsCSV() {
   const responses = getSavedResponses();
   if (responses.length === 0) {
@@ -619,52 +997,115 @@ function exportDataAsCSV() {
   }
 
   const headers = [
-    'ID_Submissao', 'Data_Hora', 'Pesquisador', 'Dispositivo_Tablet', 'Modo', 'Duracao_Segundos',
-    'P1_Atividade', 'P2_Papel', 'P4_Dor_Compra', 'P5_Dor_Credito', 'P6_Gosta', 'P6_Incomoda',
-    'P7_Porte', 'P8_Estado', 'P14_Credito_Pesa', 'P16_Fidelidade', 'P18_Gestao_Desafio',
-    'P21_Recrutamento', 'P21_Nome', 'P21_Contato', 'Status_Sync'
+    'ID_Submissao', 'Data_Hora', 'Pesquisador', 'Dispositivo_Tablet', 'Modo_Aplicacao', 'Duracao_Segundos',
+    'P1_Atividade', 'P1_Outro', 'P2_Papel', 'P2_Outro',
+    'P3_Acessa_Agro', 'P3_Syde', 'P3_Smart_Engage', 'P3_Cropwise',
+    'P4_Dor_Compra', 'P4_Outro', 'P5_Dor_Credito', 'P5_Outro',
+    'P6_Gosta', 'P6_Incomoda',
+    'P7_Porte', 'P8_Estado', 'P9_Usa_Ferramentas', 'P9_Quais_Ferramentas', 'P9_Qtd_Sistemas', 'P9_Mais_Gosta', 'P9_Menos_Gosta',
+    'P10_Plataforma_Nao_Usou', 'P10_Motivo', 'P10_Outro',
+    'P11_Plataforma_Uso_Atual', 'P11_Descricao',
+    'P12_Plataforma_Parou_Usar', 'P12_Motivo', 'P12_Outro',
+    'P13_Canal_Nao_Conhece', 'P13_Outro',
+    'P14_Credito_Pesa', 'P14_Outro',
+    'P15_Credito_Onde', 'P15_Credito_Dificuldade',
+    'P16_Fidelidade_Avaliacao', 'P16_Outro',
+    'P17_Valer_Pena',
+    'P18_Gestao_Desafio', 'P18_Outro',
+    'P19_RTV_Avaliacao', 'P19_RTV_Porque',
+    'P20_Experiencia_Livre',
+    'P21_Recrutamento_OptIn', 'P21_Nome', 'P21_Contato',
+    'Status_Sync_Firebase'
   ];
 
-  const csvRows = [headers.join(',')];
+  const csvRows = [headers.join(';')];
 
   responses.forEach(r => {
     const row = [
       escapeCsv(r.id_submissao),
       escapeCsv(r.created_at),
-      escapeCsv(r.metadata.entrevistador),
-      escapeCsv(r.metadata.dispositivo_id),
-      escapeCsv(r.metadata.modo_aplicacao),
-      r.metadata.duracao_segundos,
-      escapeCsv(r.bloco_0_essencial.p1_atividade),
-      escapeCsv(r.bloco_0_essencial.p2_papel),
-      escapeCsv(r.bloco_0_essencial.p4_dor_compra),
-      escapeCsv(r.bloco_0_essencial.p5_dor_credito),
-      escapeCsv(r.bloco_0_essencial.p6_gosta),
-      escapeCsv(r.bloco_0_essencial.p6_incomoda),
-      escapeCsv(r.bloco_1_perfil.p7_tamanho),
-      escapeCsv(r.bloco_1_perfil.p8_estado),
-      escapeCsv(r.bloco_3_dores.p14_credito_pesam),
-      escapeCsv(r.bloco_3_dores.p16_fidelidade),
-      escapeCsv(r.bloco_3_dores.p18_desafios_gestao),
-      escapeCsv(r.encerramentos.p21_recrutamento),
-      escapeCsv(r.encerramentos.p21_nome),
-      escapeCsv(r.encerramentos.p21_contato),
+      escapeCsv(r.metadata?.entrevistador),
+      escapeCsv(r.metadata?.dispositivo_id),
+      escapeCsv(r.metadata?.modo_aplicacao),
+      r.metadata?.duracao_segundos || 0,
+
+      escapeCsv(r.bloco_0_essencial?.p1_atividade),
+      escapeCsv(r.bloco_0_essencial?.p1_outro),
+      escapeCsv(r.bloco_0_essencial?.p2_papel),
+      escapeCsv(r.bloco_0_essencial?.p2_outro),
+
+      escapeCsv(r.bloco_0_essencial?.p3_matriz?.acessa_agro),
+      escapeCsv(r.bloco_0_essencial?.p3_matriz?.syde),
+      escapeCsv(r.bloco_0_essencial?.p3_matriz?.smart_engage),
+      escapeCsv(r.bloco_0_essencial?.p3_matriz?.cropwise),
+
+      escapeCsv(r.bloco_0_essencial?.p4_dor_compra),
+      escapeCsv(r.bloco_0_essencial?.p4_outro),
+      escapeCsv(r.bloco_0_essencial?.p5_dor_credito),
+      escapeCsv(r.bloco_0_essencial?.p5_outro),
+
+      escapeCsv(r.bloco_0_essencial?.p6_gosta),
+      escapeCsv(r.bloco_0_essencial?.p6_incomoda),
+
+      escapeCsv(r.bloco_1_perfil?.p7_tamanho),
+      escapeCsv(r.bloco_1_perfil?.p8_estado),
+      escapeCsv(r.bloco_1_perfil?.p9_usa_ferramentas),
+      escapeCsv(r.bloco_1_perfil?.p9_quais),
+      escapeCsv(r.bloco_1_perfil?.p9_qtd_sistemas),
+      escapeCsv(r.bloco_1_perfil?.p9_mais_gosta),
+      escapeCsv(r.bloco_1_perfil?.p9_menos_gosta),
+
+      escapeCsv(r.bloco_2_awareness?.p10_nunca_usou?.plataforma),
+      escapeCsv(r.bloco_2_awareness?.p10_nunca_usou?.motivo),
+      escapeCsv(r.bloco_2_awareness?.p10_nunca_usou?.outro),
+
+      escapeCsv(r.bloco_2_awareness?.p11_uso_atual?.plataforma),
+      escapeCsv(r.bloco_2_awareness?.p11_uso_atual?.descricao),
+
+      escapeCsv(r.bloco_2_awareness?.p12_parou_usar?.plataforma),
+      escapeCsv(r.bloco_2_awareness?.p12_parou_usar?.motivo),
+      escapeCsv(r.bloco_2_awareness?.p12_parou_usar?.outro),
+
+      escapeCsv(r.bloco_2_awareness?.p13_nao_conhece?.canal),
+      escapeCsv(r.bloco_2_awareness?.p13_nao_conhece?.outro),
+
+      escapeCsv(r.bloco_3_dores?.p14_credito_pesam),
+      escapeCsv(r.bloco_3_dores?.p14_outro),
+
+      escapeCsv(r.bloco_3_dores?.p15_credito_historico?.onde),
+      escapeCsv(r.bloco_3_dores?.p15_credito_historico?.dificuldade),
+
+      escapeCsv(r.bloco_3_dores?.p16_fidelidade),
+      escapeCsv(r.bloco_3_dores?.p16_outro),
+      escapeCsv(r.bloco_3_dores?.p17_fidelidade_valer_pena),
+
+      escapeCsv(r.bloco_3_dores?.p18_desafios_gestao),
+      escapeCsv(r.bloco_3_dores?.p18_outro),
+
+      escapeCsv(r.bloco_3_dores?.p19_rtv?.avaliacao),
+      escapeCsv(r.bloco_3_dores?.p19_rtv?.porque),
+
+      escapeCsv(r.encerramentos?.p20_experiencia),
+      escapeCsv(r.encerramentos?.p21_recrutamento),
+      escapeCsv(r.encerramentos?.p21_nome),
+      escapeCsv(r.encerramentos?.p21_contato),
+
       escapeCsv(r.sync_status)
     ];
-    csvRows.push(row.join(','));
+    csvRows.push(row.join(';'));
   });
 
   const blob = new Blob(['\uFEFF' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Pesquisa_ANDAV_2026_Export_${new Date().toISOString().slice(0,10)}.csv`;
+  a.download = `Pesquisa_ANDAV_2026_Respostas_Organizadas_${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
 }
 
 function escapeCsv(val) {
   if (!val) return '""';
-  const str = String(val).replace(/"/g, '""');
+  const str = String(val).replace(/"/g, '""').replace(/\n/g, ' ');
   return `"${str}"`;
 }
 

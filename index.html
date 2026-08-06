@@ -28,11 +28,14 @@
 
       <div class="header-controls">
         <div class="mode-badge" id="activeModeBadge">⚡ Essencial (2–3 min)</div>
+        <button class="reports-header-btn" id="openReportsHeaderBtn" title="Ver Relatórios & Analytics de Dados">
+          📊 Relatórios
+        </button>
         <div class="sync-status status-online" id="syncStatusBadge" title="Clique para gerenciar conexões e Firebase">
           <span class="status-dot"></span>
           <span class="status-text" id="syncStatusText">Firebase Conectado</span>
         </div>
-        <button class="icon-btn" id="openSettingsBtn" title="Configurações de Nuvem (Firebase / Firestore)">
+        <button class="icon-btn" id="openSettingsBtn" title="Configurações de Nuvem & IA (Firebase / Gemini)">
           ⚙️ <span class="badge-count" id="pendingCountBadge" style="display: none;">0</span>
         </button>
       </div>
@@ -793,49 +796,143 @@
   </main>
 
 
-  <!-- Modal de Configuração do Firebase & Gerenciador de Dados -->
+  <!-- Modal de Configuração do Firebase, IA Gemini & Gerenciador de Dados -->
   <div class="modal-overlay" id="settingsModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>🔥 Configuração Firebase Firestore (Opção 2)</h2>
+        <h2 id="modalHeaderTitle">⚙️ Central de Configurações, IA & Relatórios</h2>
         <button class="close-modal-btn" id="closeSettingsBtn">&times;</button>
       </div>
       
       <div class="modal-body">
         <div class="tabs-header">
-          <button class="tab-btn active" id="tabEndpointBtn">Credenciais Firebase</button>
-          <button class="tab-btn" id="tabDataBtn">Respostas Salvas (<span id="modalSavedCount">0</span>)</button>
+          <button class="tab-btn active" id="tabEndpointBtn">⚡ Credenciais (Firebase & Gemini)</button>
+          <button class="tab-btn" id="tabReportsBtn">📊 Relatórios & Analytics</button>
+          <button class="tab-btn" id="tabDataBtn">📋 Respostas Salvas (<span id="modalSavedCount">0</span>)</button>
         </div>
 
-        <!-- Aba 1: Configuração Firebase -->
+        <!-- Aba 1: Configuração Firebase & Gemini AI -->
         <div class="tab-content" id="tabEndpointContent">
-          <p class="text-sm">Insira o projeto do **Firebase Firestore**. O SDK possui persistência offline nativa para os tablets na ANDAV.</p>
-          
-          <div class="form-group margin-top-md">
-            <label for="firebaseApiKey">API Key do Firebase:</label>
-            <input type="text" id="firebaseApiKey" placeholder="AIzaSy...">
+          <div class="card-inner-box">
+            <h3>🔥 Conexão Nuvem Firebase Firestore</h3>
+            <p class="text-sm">Insira os dados do seu projeto Firebase Firestore para sincronização offline/online nativa nos tablets.</p>
+            
+            <div class="form-group margin-top-md">
+              <label for="firebaseApiKey">API Key do Firebase:</label>
+              <input type="text" id="firebaseApiKey" placeholder="AIzaSy...">
+            </div>
+
+            <div class="grid-2 margin-top-md">
+              <div class="form-group">
+                <label for="firebaseProjectId">Project ID:</label>
+                <input type="text" id="firebaseProjectId" placeholder="pesquisa-andav-syngenta">
+              </div>
+              <div class="form-group">
+                <label for="firebaseAppId">App ID:</label>
+                <input type="text" id="firebaseAppId" placeholder="1:12345678:web:abcde...">
+              </div>
+            </div>
           </div>
 
-          <div class="grid-2 margin-top-md">
-            <div class="form-group">
-              <label for="firebaseProjectId">Project ID:</label>
-              <input type="text" id="firebaseProjectId" placeholder="pesquisa-andav-syngenta">
+          <!-- Seção Gemini AI para Transcrição -->
+          <div class="card-inner-box margin-top-lg">
+            <h3>✨ Transcrição de Voz Inteligente com Gemini AI</h3>
+            <p class="text-sm">Insira a sua **Gemini API Key** para transcrição avançada de áudio gravado nos campos abertos. *(Se não informada, o sistema usa o reconhecimento nativo pt-BR do navegador)*.</p>
+            
+            <div class="form-group margin-top-md">
+              <label for="geminiApiKey">API Key do Gemini (Google AI Studio / GCP):</label>
+              <input type="password" id="geminiApiKey" placeholder="AIzaSy..." class="input-code">
             </div>
-            <div class="form-group">
-              <label for="firebaseAppId">App ID:</label>
-              <input type="text" id="firebaseAppId" placeholder="1:12345678:web:abcde...">
+
+            <!-- Box Orientação GCP Print -->
+            <div class="gcp-guide-box margin-top-md">
+              <div class="gcp-guide-header">
+                💡 Orientação para criar a chave no Google Cloud (Sua dúvida do Print):
+              </div>
+              <p class="gcp-guide-text">
+                No painel da GCP, no campo <strong>"Select API restrictions *"</strong>, busque e selecione a opção: <mark class="gcp-highlight">Generative Language API</mark>.<br>
+                Esta é a API oficial que dá acesso aos modelos <strong>Gemini 1.5 e 2.0 Flash</strong> para transcrição de áudio e texto.
+              </p>
             </div>
           </div>
 
-          <div class="flex-buttons margin-top-md">
-            <button class="btn btn-secondary" id="testApiBtn">🧪 Conectar ao Firebase</button>
-            <button class="btn btn-primary" id="saveApiConfigBtn">💾 Salvar Credenciais</button>
+          <div class="flex-buttons margin-top-lg">
+            <button class="btn btn-secondary" id="testApiBtn">🧪 Testar Conexão Firebase</button>
+            <button class="btn btn-primary" id="saveApiConfigBtn">💾 Salvar Credenciais & API Key Gemini</button>
           </div>
           
           <div class="alert-box margin-top-md" id="apiTestResult" style="display: none;"></div>
         </div>
 
-        <!-- Aba 2: Gerenciador de Dados -->
+        <!-- Aba 2: Relatórios & Analytics -->
+        <div class="tab-content" id="tabReportsContent" style="display: none;">
+          <div class="reports-header-actions">
+            <div>
+              <h3>📊 Painel de Relatórios da Pesquisa ANDAV 2026</h3>
+              <p class="text-sm">Resumo estatístico das respostas coletadas e métricas em tempo real.</p>
+            </div>
+            <button class="btn btn-success btn-large" id="exportReportsCsvBtn">
+              📥 Baixar Respostas Organizadas (CSV / Excel)
+            </button>
+          </div>
+
+          <!-- KPIs -->
+          <div class="reports-kpi-grid margin-top-md">
+            <div class="kpi-card">
+              <span class="kpi-label">Total de Respostas</span>
+              <span class="kpi-value" id="kpiTotalCount">0</span>
+              <span class="kpi-sub">entrevistas concluídas</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">Modo Completo</span>
+              <span class="kpi-value" id="kpiCompletoPct">0%</span>
+              <span class="kpi-sub" id="kpiCompletoCount">0 entrevistas</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">Modo Essencial</span>
+              <span class="kpi-value" id="kpiEssencialPct">0%</span>
+              <span class="kpi-sub" id="kpiEssencialCount">0 entrevistas</span>
+            </div>
+            <div class="kpi-card">
+              <span class="kpi-label">Tempo Médio</span>
+              <span class="kpi-value" id="kpiAvgDuration">0s</span>
+              <span class="kpi-sub">por aplicação</span>
+            </div>
+          </div>
+
+          <!-- Distribuição P1 -->
+          <div class="reports-section margin-top-lg">
+            <h4>🌾 Distribuição por Perfil de Atividade (P1)</h4>
+            <div class="distribution-list" id="p1DistributionList">
+              <p class="text-muted text-sm">Nenhuma resposta registrada ainda.</p>
+            </div>
+          </div>
+
+          <!-- Distribuição P3 -->
+          <div class="reports-section margin-top-lg">
+            <h4>🌱 Adoção do Ecossistema Syngenta (P3 - Matriz)</h4>
+            <div class="grid-2 gap-md margin-top-sm" id="p3DistributionGrid">
+              <!-- Preenchido dinamicamente via JS -->
+            </div>
+          </div>
+
+          <!-- Dores P4 e P5 -->
+          <div class="reports-section margin-top-lg">
+            <h4>⚠️ Principais Dores Mapeadas (Insumos & Crédito)</h4>
+            <div class="grid-2 gap-md margin-top-sm">
+              <div class="sub-report-box">
+                <h5>Principal Dor na Compra (P4)</h5>
+                <div id="p4DistributionList"></div>
+              </div>
+              <div class="sub-report-box">
+                <h5>Principal Dor no Crédito (P5)</h5>
+                <div id="p5DistributionList"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Aba 3: Gerenciador de Dados (Respostas Salvas) -->
         <div class="tab-content" id="tabDataContent" style="display: none;">
           <div class="data-summary-bar">
             <div>
@@ -864,7 +961,7 @@
           </div>
 
           <div class="flex-buttons margin-top-lg">
-            <button class="btn btn-secondary" id="exportCsvBtn">📥 Baixar Excel / CSV</button>
+            <button class="btn btn-secondary" id="exportCsvBtn">📥 Baixar Excel / CSV Organizado</button>
             <button class="btn btn-secondary" id="exportJsonBtn">📄 Baixar JSON</button>
             <button class="btn btn-danger" id="clearDataBtn">🗑️ Limpar Dados Locais</button>
           </div>

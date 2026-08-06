@@ -889,3 +889,252 @@ textarea:focus {
 .margin-top-sm { margin-top: 8px; }
 .margin-top-md { margin-top: 16px; }
 .margin-top-lg { margin-top: 24px; }
+.gap-md { gap: 16px; }
+
+/* Botão de Relatórios no Header */
+.reports-header-btn {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(16, 185, 129, 0.2));
+  border: 1px solid var(--accent-cyan);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.reports-header-btn:hover {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.35), rgba(16, 185, 129, 0.35));
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Voice Input Wrapper & Mic Button */
+.form-group-voice {
+  position: relative;
+}
+
+.label-voice-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.voice-rec-btn {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid var(--syngenta-green);
+  color: var(--syngenta-green-light);
+  border-radius: var(--radius-pill);
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.voice-rec-btn:hover {
+  background: rgba(16, 185, 129, 0.25);
+  box-shadow: 0 0 8px var(--syngenta-green-glow);
+}
+
+.voice-rec-btn.recording {
+  background: rgba(239, 68, 68, 0.25) !important;
+  border-color: var(--accent-red) !important;
+  color: #FCA5A5 !important;
+  animation: pulse-red 1.5s infinite;
+}
+
+.voice-rec-btn.processing {
+  background: rgba(6, 182, 212, 0.25) !important;
+  border-color: var(--accent-cyan) !important;
+  color: #7DD3FC !important;
+}
+
+@keyframes pulse-red {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+/* Card de Orientação GCP Print */
+.gcp-guide-box {
+  background: rgba(6, 182, 212, 0.08);
+  border: 1px dashed var(--accent-cyan);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+}
+
+.gcp-guide-header {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: #7DD3FC;
+  margin-bottom: 6px;
+}
+
+.gcp-guide-text {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.gcp-highlight {
+  background: rgba(16, 185, 129, 0.25);
+  color: var(--syngenta-green-light);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  border: 1px solid var(--syngenta-green);
+}
+
+.card-inner-box {
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 18px;
+}
+
+.card-inner-box h3 {
+  font-size: 1.05rem;
+  font-family: var(--font-display);
+  margin-bottom: 6px;
+}
+
+.input-code {
+  font-family: monospace;
+  letter-spacing: 1px;
+}
+
+/* Aba de Relatórios & Analytics Dashboard */
+.reports-header-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border-color);
+  padding: 16px 20px;
+  border-radius: var(--radius-md);
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.reports-header-actions h3 {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+}
+
+.reports-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+}
+
+.kpi-card {
+  background: rgba(28, 37, 65, 0.7);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.kpi-label {
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.kpi-value {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--syngenta-green-light);
+  margin: 4px 0;
+}
+
+.kpi-sub {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.reports-section {
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 18px;
+}
+
+.reports-section h4 {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 8px;
+}
+
+.reports-section h5 {
+  font-size: 0.88rem;
+  color: var(--accent-cyan);
+  margin-bottom: 10px;
+}
+
+.sub-report-box {
+  background: rgba(28, 37, 65, 0.5);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+}
+
+.bar-row {
+  margin-bottom: 10px;
+}
+
+.bar-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  margin-bottom: 4px;
+}
+
+.bar-name {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.bar-count {
+  color: var(--syngenta-green-light);
+  font-weight: 700;
+}
+
+.bar-track {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--syngenta-green), var(--accent-cyan));
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
