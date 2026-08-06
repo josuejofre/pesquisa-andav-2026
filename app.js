@@ -125,6 +125,7 @@ function initFirebaseIfConfigured() {
 
       appState.isFirebaseActive = true;
       console.log('[Firebase Firestore] Inicializado com sucesso!');
+      setupFirestoreRealtimeListener();
     }
   } catch (e) {
     console.error('[Firebase Init Error]', e);
@@ -721,6 +722,71 @@ async function syncPendingData() {
   updateSavedCountModal();
 }
 
+function normalizeResponseDoc(doc) {
+  const data = doc.data() || {};
+  const subId = data.id_submissao || doc.id;
+  
+  return {
+    id_submissao: subId,
+    created_at: data.created_at || new Date().toISOString(),
+    sync_status: 'synced',
+    metadata: {
+      entrevistador: data.metadata?.entrevistador || data.entrevistador || 'Pesquisador',
+      dispositivo_id: data.metadata?.dispositivo_id || data.dispositivo_id || 'Tablet',
+      modo_aplicacao: data.metadata?.modo_aplicacao || data.modo_aplicacao || 'essencial',
+      timestamp_inicio: data.metadata?.timestamp_inicio || data.timestamp_inicio || null,
+      timestamp_fim: data.metadata?.timestamp_fim || data.timestamp_fim || null,
+      duracao_segundos: data.metadata?.duracao_segundos || data.duracao_segundos || 0
+    },
+    bloco_0_essencial: {
+      p1_atividade: data.bloco_0_essencial?.p1_atividade || data.p1_atividade || '-',
+      p1_outro: data.bloco_0_essencial?.p1_outro || data.p1_outro || '',
+      p2_papel: data.bloco_0_essencial?.p2_papel || data.p2_papel || '',
+      p2_outro: data.bloco_0_essencial?.p2_outro || data.p2_outro || '',
+      p3_matriz: data.bloco_0_essencial?.p3_matriz || data.p3_matriz || {},
+      p4_dor_compra: data.bloco_0_essencial?.p4_dor_compra || data.p4_dor_compra || '',
+      p4_outro: data.bloco_0_essencial?.p4_outro || data.p4_outro || '',
+      p5_dor_credito: data.bloco_0_essencial?.p5_dor_credito || data.p5_dor_credito || '',
+      p5_outro: data.bloco_0_essencial?.p5_outro || data.p5_outro || '',
+      p6_gosta: data.bloco_0_essencial?.p6_gosta || data.p6_gosta || '',
+      p6_incomoda: data.bloco_0_essencial?.p6_incomoda || data.p6_incomoda || ''
+    },
+    bloco_1_perfil: data.bloco_1_perfil || {},
+    bloco_2_awareness: data.bloco_2_awareness || {},
+    bloco_3_dores: data.bloco_3_dores || {},
+    encerramentos: data.encerramentos || {}
+  };
+}
+
+function setupFirestoreRealtimeListener() {
+  if (!appState.isFirebaseActive || !appState.db) return;
+  
+  appState.db.collection('respostas_andav_2026').onSnapshot((snapshot) => {
+    if (!snapshot || snapshot.empty) return;
+    
+    const localResponses = getSavedResponses();
+    const localMap = new Map();
+    localResponses.forEach(r => {
+      if (r && r.id_submissao) localMap.set(r.id_submissao, r);
+    });
+
+    snapshot.forEach(doc => {
+      const normalized = normalizeResponseDoc(doc);
+      localMap.set(normalized.id_submissao, normalized);
+    });
+
+    const updatedList = Array.from(localMap.values());
+    updatedList.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+
+    localStorage.setItem(STORAGE_KEYS.RESPONSES, JSON.stringify(updatedList));
+    updateSyncStatusBadge();
+    updateSavedCountModal();
+    renderReportsTab();
+  }, (err) => {
+    console.warn('[Firebase Listener Error]', err);
+  });
+}
+
 async function pullRemoteDataFromFirebase() {
   if (!appState.isFirebaseActive || !appState.db) return false;
 
@@ -735,11 +801,8 @@ async function pullRemoteDataFromFirebase() {
     });
 
     snapshot.forEach(doc => {
-      const remoteData = doc.data();
-      if (remoteData && remoteData.id_submissao) {
-        remoteData.sync_status = 'synced';
-        localMap.set(remoteData.id_submissao, remoteData);
-      }
+      const normalized = normalizeResponseDoc(doc);
+      localMap.set(normalized.id_submissao, normalized);
     });
 
     const updatedList = Array.from(localMap.values());
