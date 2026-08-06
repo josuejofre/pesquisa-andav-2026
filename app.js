@@ -69,7 +69,10 @@ function loadSavedConfig() {
   let cfg = DEFAULT_FIREBASE_CONFIG;
   if (savedConfigStr) {
     try {
-      cfg = JSON.parse(savedConfigStr);
+      const parsed = JSON.parse(savedConfigStr);
+      if (parsed && parsed.apiKey && parsed.projectId) {
+        cfg = parsed;
+      }
     } catch (e) {}
   }
   document.getElementById('firebaseApiKey').value = cfg.apiKey || '';
@@ -94,15 +97,23 @@ function loadSavedConfig() {
 }
 
 async function initFirebaseIfConfigured() {
-  if (typeof firebase === 'undefined') return;
+  if (typeof firebase === 'undefined') {
+    console.error('[Firebase Init] SDK do Firebase não está carregado.');
+    return;
+  }
 
   const savedConfigStr = localStorage.getItem(STORAGE_KEYS.FIREBASE_CONFIG);
   let config = DEFAULT_FIREBASE_CONFIG;
   if (savedConfigStr) {
     try {
-      config = JSON.parse(savedConfigStr);
+      const parsed = JSON.parse(savedConfigStr);
+      if (parsed && parsed.apiKey && parsed.projectId) {
+        config = parsed;
+      }
     } catch (e) {}
   }
+
+  console.log('[Firebase Init] Conectando ao Firestore (projectId: ' + config.projectId + ')...');
 
   try {
     if (config.apiKey && config.projectId) {
@@ -114,7 +125,7 @@ async function initFirebaseIfConfigured() {
       
       appState.db = firebase.firestore();
       
-      // Persistência Offline Nativa Firestore (Tratada com await para compatibilidade com abas anônimas)
+      // Persistência Offline Nativa Firestore
       try {
         await appState.db.enablePersistence({ synchronizeTabs: false });
       } catch (err) {
@@ -122,8 +133,10 @@ async function initFirebaseIfConfigured() {
       }
 
       appState.isFirebaseActive = true;
-      console.log('[Firebase Firestore] Inicializado com sucesso!');
+      console.log('[Firebase Firestore] Conectado e ativo com sucesso!');
       setupFirestoreRealtimeListener();
+    } else {
+      console.warn('[Firebase Init] Credenciais incompletas.');
     }
   } catch (e) {
     console.error('[Firebase Init Error]', e);
@@ -786,10 +799,16 @@ function setupFirestoreRealtimeListener() {
 }
 
 async function pullRemoteDataFromFirebase() {
-  if (!appState.isFirebaseActive || !appState.db) return false;
+  if (!appState.isFirebaseActive || !appState.db) {
+    console.warn('[Firebase Pull] Ignorado - Firebase inativo.');
+    return false;
+  }
 
   try {
+    console.log('[Firebase Pull] Consultando coleção respostas_andav_2026 no Firestore...');
     const snapshot = await appState.db.collection('respostas_andav_2026').get();
+    console.log(`[Firebase Pull] Sucesso! Encontrados ${snapshot.size} documentos no Firestore.`);
+
     if (snapshot.empty) return false;
 
     const localResponses = getSavedResponses();
@@ -813,7 +832,7 @@ async function pullRemoteDataFromFirebase() {
     renderReportsTab();
     return true;
   } catch (err) {
-    console.warn('[Firebase Pull Error] Não foi possível carregar registros remotos:', err);
+    console.error('[Firebase Pull Error] Falha ao consultar o Firestore:', err);
     return false;
   }
 }
