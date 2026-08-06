@@ -58,6 +58,7 @@ function initApp() {
   initVoiceRecorders();
   updateSyncStatusBadge();
   updateSavedCountModal();
+  pullRemoteDataFromFirebase();
 }
 
 /* ==========================================================================
@@ -700,7 +701,10 @@ async function sendResponseToFirebase(payload) {
 async function syncPendingData() {
   const responses = getSavedResponses();
   const pending = responses.filter(r => r.sync_status === 'pending');
-  if (pending.length === 0) return;
+  if (pending.length === 0) {
+    await pullRemoteDataFromFirebase();
+    return;
+  }
 
   const badgeText = document.getElementById('syncStatusText');
   badgeText.textContent = `Sync Firebase (${pending.length})...`;
@@ -712,8 +716,45 @@ async function syncPendingData() {
     }
   }
 
+  await pullRemoteDataFromFirebase();
   updateSyncStatusBadge();
   updateSavedCountModal();
+}
+
+async function pullRemoteDataFromFirebase() {
+  if (!appState.isFirebaseActive || !appState.db) return false;
+
+  try {
+    const snapshot = await appState.db.collection('respostas_andav_2026').get();
+    if (snapshot.empty) return false;
+
+    const localResponses = getSavedResponses();
+    const localMap = new Map();
+    localResponses.forEach(r => {
+      if (r && r.id_submissao) localMap.set(r.id_submissao, r);
+    });
+
+    snapshot.forEach(doc => {
+      const remoteData = doc.data();
+      if (remoteData && remoteData.id_submissao) {
+        remoteData.sync_status = 'synced';
+        localMap.set(remoteData.id_submissao, remoteData);
+      }
+    });
+
+    const updatedList = Array.from(localMap.values());
+    updatedList.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+
+    localStorage.setItem(STORAGE_KEYS.RESPONSES, JSON.stringify(updatedList));
+
+    updateSyncStatusBadge();
+    updateSavedCountModal();
+    renderReportsTab();
+    return true;
+  } catch (err) {
+    console.warn('[Firebase Pull Error] Não foi possível carregar registros remotos:', err);
+    return false;
+  }
 }
 
 function showSuccessScreen(payload) {
@@ -776,6 +817,7 @@ function updateSyncStatusBadge() {
 function openSettingsModal() {
   document.getElementById('settingsModal').style.display = 'flex';
   updateSavedCountModal();
+  pullRemoteDataFromFirebase();
 }
 
 function openReportsModal() {
@@ -985,7 +1027,12 @@ function updateSavedCountModal() {
 
 async function forceManualSync() {
   await syncPendingData();
-  alert('Sincronização manual com o Firebase finalizada.');
+  const pulled = await pullRemoteDataFromFirebase();
+  if (pulled) {
+    alert('Sincronização bidirecional com o Firebase finalizada com sucesso!');
+  } else {
+    alert('Sincronização manual com o Firebase finalizada.');
+  }
 }
 
 /* EXPORTAÇÃO COMPLETA E ORGANIZADA EM CSV (EXCEL BOM UTF-8) */
