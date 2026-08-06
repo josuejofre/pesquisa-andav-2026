@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pesquisa ANDAV 2026 — Ecossistema Syngenta</title>
+  <!-- Google Fonts: Plus Jakarta Sans & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  
+  <!-- Firebase SDK (Opção 2 - Firestore Realtime & Offline Persistence) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <!-- Header principal -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand-group">
+        <div class="logo-badge">Syngenta</div>
+        <div class="header-titles">
+          <h1>Pesquisa ANDAV 2026</h1>
+          <span class="subtitle">Ecossistema Digital & UX Research</span>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <div class="mode-badge" id="activeModeBadge">⚡ Essencial (2–3 min)</div>
+        <div class="sync-status status-online" id="syncStatusBadge" title="Clique para gerenciar conexões e Firebase">
+          <span class="status-dot"></span>
+          <span class="status-text" id="syncStatusText">Firebase Conectado</span>
+        </div>
+        <button class="icon-btn" id="openSettingsBtn" title="Configurações de Nuvem (Firebase / Firestore)">
+          ⚙️ <span class="badge-count" id="pendingCountBadge" style="display: none;">0</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Barra de Progresso -->
+    <div class="progress-bar-container">
+      <div class="progress-bar-fill" id="progressBarFill" style="width: 0%;"></div>
+    </div>
+  </header>
+
+  <!-- Container Principal -->
+  <main class="main-container">
+
+    <!-- Card de Setup de Sessão (Pesquisador / Tablet) -->
+    <section class="card setup-card" id="sessionSetupSection">
+      <div class="card-header">
+        <span class="tag">Configuração da Sessão</span>
+        <h2>Identificação do Entrevistador</h2>
+        <p>Informe seus dados para registrar a rastreabilidade das coletas neste dispositivo.</p>
+      </div>
+      <div class="card-body">
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="interviewerName">Nome do Pesquisador / Entrevistador *</label>
+            <input type="text" id="interviewerName" placeholder="Ex: Ana Souza" required>
+          </div>
+          <div class="form-group">
+            <label for="deviceId">ID do Dispositivo / Tablet *</label>
+            <input type="text" id="deviceId" placeholder="Ex: Tablet_01" required>
+          </div>
+        </div>
+        
+        <div class="mode-selector-box">
+          <label class="section-label">Selecione o Modo de Aplicação Inicial:</label>
+          <div class="grid-2">
+            <div class="mode-card active" id="modeCardEssencial" onclick="selectMode('essencial')">
+              <div class="mode-card-header">
+                <h3>⚡ Modo Essencial</h3>
+                <span class="time-pill">2–3 min</span>
+              </div>
+              <p>Abordagem de corredor, pessoa em trânsito. Bloco 0 (Perguntas P1 a P6 + Recrutamento).</p>
+            </div>
+            
+            <div class="mode-card" id="modeCardCompleto" onclick="selectMode('completo')">
+              <div class="mode-card-header">
+                <h3>📋 Modo Completo</h3>
+                <span class="time-pill">7–9 min</span>
+              </div>
+              <p>Visitante engajado/sentado no estande. Todos os Blocos 0 a 3 (Perguntas P1 a P21).</p>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-large" id="startSurveyBtn">
+          Iniciar Pesquisa ➔
+        </button>
+      </div>
+    </section>
+
+    <!-- Formulário Dinâmico da Pesquisa -->
+    <form id="surveyForm" style="display: none;">
+
+      <!-- ================= BLOCO 0: ESSENCIAL ================= -->
+      <div class="block-section" id="bloco0">
+        <div class="block-banner">
+          <span class="block-tag">BLOCO 0 · SEMPRE APLICADO</span>
+          <h2>Visão Essencial</h2>
+          <p>Identificação de perfil, matriz de plataformas e dores de topo.</p>
+        </div>
+
+        <!-- P1 -->
+        <div class="card question-card" id="q_p1">
+          <div class="question-header">
+            <span class="q-number">P1</span>
+            <span class="q-type">Única Escolha</span>
+          </div>
+          <h3>Qual sua atividade principal?</h3>
+          <p class="q-hint">Define o canal e produtos mais relevantes.</p>
+          <div class="options-list">
+            <label class="option-card">
+              <input type="radio" name="p1_atividade" value="Revenda / distribuidor de insumos" required>
+              <span class="option-text">Revenda / distribuidor de insumos</span>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="p1_atividade" value="Cooperativa">
+              <span class="option-text">Cooperativa</span>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="p1_atividade" value="Produtor rural">
+              <span class="option-text">Produtor rural</span>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="p1_atividade" value="Consultor / assessor">
+              <span class="option-text">Consultor / assessor</span>
+            </label>
+            <label class="option-card option-other">
+              <input type="radio" name="p1_atividade" value="Outro">
+              <span class="option-text">Outro:</span>
+              <input type="text" id="p1_outro" class="input-inline" placeholder="Especifique...">
+            </label>
+          </div>
+        </div>
+
+        <!-- P2 -->
+        <div class="card question-card" id="q_p2">
+          <div class="question-header">
+            <span class="q-number">P2</span>
+            <span class="q-type">Única Escolha</span>
+          </div>
+          <h3>Qual é o seu papel na operação / na decisão de compra?</h3>
+          <p class="q-hint">Permite qualificar o papel no processo comercial.</p>
+          <div class="options-list">
+            <label class="option-card">
+              <input type="radio" name="p2_papel" value="Proprietário / sócio" required>
+              <span class="option-text">Proprietário / sócio</span>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="p2_papel" value="Diretor / financeiro / CFO">
+              <span class="option-text">Diretor / financeiro / CFO</span>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="p2_papel" value="Gerente / coordenador">
+              <span class="option-text">Gerente / coordenador</span>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="p2_papel" value="Comprador / suprimentos">
+              <span class="option-text">Comprador / suprimentos</span>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="p2_papel" value="Agrônomo / consultor técnico">
+              <span class="option-text">Agrônomo / consultor técnico</span>
+            </label>
+            <label class="option-card option-other">
+              <input type="radio" name="p2_papel" value="Outro">
+              <span class="option-text">Outro:</span>
+              <input type="text" id="p2_outro" class="input-inline" placeholder="Especifique...">
+            </label>
+          </div>
+        </div>
+
+        <!-- P3 MATRIZ -->
+        <div class="card question-card" id="q_p3">
+          <div class="question-header">
+            <span class="q-number">P3</span>
+            <span class="q-type">Matriz de Plataformas (Uma opção por linha)</span>
+          </div>
+          <h3>Quais dessas plataformas da Syngenta você conhece e/ou já usa?</h3>
+          <p class="q-hint">Consolida awareness, adoção e retenção no ecossistema.</p>
+          
+          <div class="matrix-table-wrapper">
+            <table class="matrix-table">
+              <thead>
+                <tr>
+                  <th>Plataforma</th>
+                  <th>Conheço, nunca usei</th>
+                  <th>Já usei, parei</th>
+                  <th>Uso atualmente</th>
+                  <th>Não conheço</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="platform-name">
+                    <strong>Acessa Agro</strong>
+                    <span class="platform-desc">Fidelidade & Resgate de pontos</span>
+                  </td>
+                  <td><label class="matrix-radio"><input type="radio" name="p3_acessa_agro" value="conheco_nunca_usei" required><span></span></label></td>
+                  <td><label class="matrix-radio"><input type="radio" name="p3_acessa_agro" value="ja_usei_parei"><span></span></label></td>
+                  <td><label class="matrix-radio"><input type="radio" name="p3_acessa_agro" value="uso_atualmente"><span></span></label></td>
+                  <td><label class="matrix-radio"><input type="radio" name="p3_acessa_agro" value="nao_conheco"><span></span></label></td>
+                </tr>
+                <tr>
+                  <td class="platform-name">
+                    <strong>Syde</strong>
+                    <span class="platform-desc">Marketplace de Crédito Rural</span>
+                  </td>
+                  <td><label class="matrix-radio"><input type="radio" name="p3_syde" value="conheco_nunca_usei" required><span></span></label></td>
+                  <td><label class="matrix-radio"><input type="radio" name="p3_syde" value="ja_usei_parei"><span></span></label></td>
+                  <td><label class="matrix-radio"><input type="radio" name="p3_syde" value="uso_atualmente"><span></span></label></td>
+                  <td><label class="matrix-radio"><input type="radio" name="p3_syde" value="nao_conheco"><span></span></label></td>
+                </tr>
+                <tr>
+                  <td class="platform-name">
+                    <strong>Smart Engage</strong>
+                    <span class="platform-desc">App Força de Vendas / RTVs</span>
+                  </td>
+                  <td><label class="matrix-radio"><input type="radio" name="p3_smart_engage" value="conheco_nunca_usei" required><span></span></label></td>
+                  <td><label class="matrix-radio"><input type="radio" name="p3_smart_engage" value="ja_usei_parei"><span></span></label></td>
+                  <td><label class="matrix-radio"><input type="radio" name="p3_smart_engage" value="uso_atualmente"><span></span></label></td>
+                  <td><label class="matrix-radio"><input type="radio" name="p3_smart_engage" value="nao_conheco"><span></span></label></td>
+                </tr>
+                <tr>
+                  <td class="platform-name">
+                    <strong>Cropwise</strong> <span class="tag-new">NOVO</span>
+                    <span class="platform-desc">Plataforma de Agricultura Digital</span>
+                  </td>
+                  <td><label class="matrix-radio"><input type="radio" name="p3_cropwise" value="conheco_nunca_usei" required><span></span></label></td>
+                  <td><label class="matrix-radio"><input type="radio" name="p3_cropwise" value="ja_usei_parei"><span></span></label></td>
+                  <td><label class="matrix-radio"><input type="radio" name="p3_cropwise" value="uso_atualmente"><span></span></label></td>
+                  <td><label class="matrix-radio"><input type="radio" name="p3_cropwise" value="nao_conheco"><span></span></label></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- P4 -->
+        <div class="card question-card" id="q_p4">
+          <div class="question-header">
+            <span class="q-number">P4</span>
+            <span class="q-type">Única Escolha</span>
+          </div>
+          <h3>No seu processo de decisão de compra de insumos, o que mais te dói?</h3>
+          <div class="options-list">
+            <label class="option-card">
+              <input type="radio" name="p4_dor_compra" value="Preço / condição de pagamento" required>
+              <span class="option-text">Preço / condição de pagamento</span>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="p4_dor_compra" value="Falta ou custo do crédito">
+              <span class="option-text">Falta ou custo do crédito</span>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="p4_dor_compra" value="Burocracia e documentação">
+              <span class="option-text">Burocracia e documentação</span>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="p4_dor_compra" value="Dificuldade de comparar ofertas">
+              <span class="option-text">Dificuldade de comparar ofertas</span>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="p4_dor_compra" value="Prazo de entrega / logística">
+              <span class="option-text">Prazo de entrega / logística</span>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="p4_dor_compra" value="Confiança e relacionamento com o fornecedor">
+              <span class="option-text">Confiança e relacionamento com o fornecedor</span>
+            </label>
+            <label class="option-card option-other">
+              <input type="radio" name="p4_dor_compra" value="Outro">
+              <span class="option-text">Outro:</span>
+              <input type="text" id="p4_outro" class="input-inline" placeholder="Especifique...">
+            </label>
+          </div>
+        </div>
+
+        <!-- P5 -->
+        <div class="card question-card" id="q_p5">
+          <div class="question-header">
+            <span class="q-number">P5</span>
+            <span class="q-type">Única Escolha</span>
+          </div>
+          <h3>Na hora de buscar crédito rural, o que mais atrapalha?</h3>
+          <div class="options-list">
+            <label class="option-card">
+              <input type="radio" name="p5_dor_credito" value="Burocracia / documentação" required>
+              <span class="option-text">Burocracia / documentação</span>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="p5_dor_credito" value="Não consigo comparar ofertas de diferentes fontes">
+              <span class="option-text">Não consigo comparar ofertas de diferentes fontes</span>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="p5_dor_credito" value="Tempo de aprovação">
+              <span class="option-text">Tempo de aprovação</span>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="p5_dor_credito" value="Falta de opções pro meu perfil/porte">
+              <span class="option-text">Falta de opções pro meu perfil/porte</span>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="p5_dor_credito" value="Não sei o status da minha proposta">
+              <span class="option-text">Não sei o status da minha proposta</span>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="p5_dor_credito" value="Não busco crédito">
+              <span class="option-text">Não busco crédito</span>
+            </label>
+            <label class="option-card option-other">
+              <input type="radio" name="p5_dor_credito" value="Outro">
+              <span class="option-text">Outro:</span>
+              <input type="text" id="p5_outro" class="input-inline" placeholder="Especifique...">
+            </label>
+          </div>
+        </div>
+
+        <!-- P6 -->
+        <div class="card question-card" id="q_p6">
+          <div class="question-header">
+            <span class="q-number">P6</span>
+            <span class="q-type">Duas Respostas Abertas</span>
+          </div>
+          <h3>Na sua relação com a Syngenta, o que você mais gosta — e o que mais te incomoda?</h3>
+          
+          <div class="form-group margin-top-md">
+            <label for="p6_gosta">🟢 O que você mais <strong>GOSTA</strong>:</label>
+            <textarea id="p6_gosta" rows="2" placeholder="Digite aqui o aspecto mais positivo..."></textarea>
+          </div>
+          
+          <div class="form-group margin-top-md">
+            <label for="p6_incomoda">🔴 O que mais te <strong>INCOMODA</strong>:</label>
+            <textarea id="p6_incomoda" rows="2" placeholder="Digite aqui a principal dor ou insatisfação..."></textarea>
+          </div>
+        </div>
+
+        <!-- Transição do Modo Essencial -->
+        <div class="card transition-card" id="modeTransitionCard">
+          <h3>Fim do Roteiro Essencial</h3>
+          <p>Você completou o Bloco 0 (2-3 min). O participante tem mais tempo para continuar?</p>
+          <div class="flex-buttons">
+            <button type="button" class="btn btn-secondary" id="btnFinishEssencial">
+              🛑 Encerrar Aqui e Ir para Recrutamento (P21)
+            </button>
+            <button type="button" class="btn btn-primary" id="btnContinueCompleto">
+              ➡️ Continuar para Bloco Completo (7-9 min)
+            </button>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ================= BLOCO 1: PERFIL (COMPLEMENTO) ================= -->
+      <div class="block-section" id="bloco1" style="display: none;">
+        <div class="block-banner">
+          <span class="block-tag">BLOCO 1 · PERFIL COMPLEMENTAR</span>
+          <h2>Porte, Estado e Rotina Digital</h2>
+          <p>Cortes analíticos adicionais para cruzamentos de dados.</p>
+        </div>
+
+        <!-- P7 -->
+        <div class="card question-card" id="q_p7">
+          <div class="question-header">
+            <span class="q-number">P7</span>
+            <span class="q-type">Única Escolha</span>
+          </div>
+          <h3>Tamanho da operação (colaboradores ou hectares)</h3>
+          <div class="options-list">
+            <label class="option-card">
+              <input type="radio" name="p7_tamanho" value="Até 10 pessoas / 500 ha">
+              <span class="option-text">Até 10 pessoas / 500 ha</span>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="p7_tamanho" value="11–50 pessoas / 501–2.000 ha">
+              <span class="option-text">11–50 pessoas / 501–2.000 ha</span>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="p7_tamanho" value="51–200 pessoas / 2.001–10.000 ha">
+              <span class="option-text">51–200 pessoas / 2.001–10.000 ha</span>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="p7_tamanho" value="Mais de 200 pessoas / 10.000+ ha">
+              <span class="option-text">Mais de 200 pessoas / 10.000+ ha</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- P8 -->
+        <div class="card question-card" id="q_p8">
+          <div class="question-header">
+            <span class="q-number">P8</span>
+            <span class="q-type">Resposta Aberta / Estado</span>
+          </div>
+          <h3>De qual estado você é?</h3>
+          <div class="form-group margin-top-md">
+            <select id="p8_estado">
+              <option value="">Selecione o Estado (UF)...</option>
+              <option value="MT">Mato Grosso (MT)</option>
+              <option value="MS">Mato Grosso do Sul (MS)</option>
+              <option value="GO">Goiás (GO)</option>
+              <option value="PR">Paraná (PR)</option>
+              <option value="SP">São Paulo (SP)</option>
+              <option value="MG">Minas Gerais (MG)</option>
+              <option value="RS">Rio Grande do Sul (RS)</option>
+              <option value="BA">Bahia (BA)</option>
+              <option value="MA">Maranhão (MA)</option>
+              <option value="TO">Tocantins (TO)</option>
+              <option value="PI">Piauí (PI)</option>
+              <option value="PA">Pará (PA)</option>
+              <option value="RO">Rondônia (RO)</option>
+              <option value="SC">Santa Catarina (SC)</option>
+              <option value="OUTRO">Outro Estado / Exterior</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- P9 -->
+        <div class="card question-card" id="q_p9">
+          <div class="question-header">
+            <span class="q-number">P9</span>
+            <span class="q-type">Múltiplas Partes</span>
+          </div>
+          <h3>Como é o seu dia a dia com sistemas e ferramentas digitais?</h3>
+          
+          <div class="sub-question">
+            <label>a) Você usa alguma plataforma/ferramenta digital no dia a dia?</label>
+            <div class="radio-group-inline">
+              <label class="radio-pill"><input type="radio" name="p9_usa_ferramentas" value="Sim"> Sim</label>
+              <label class="radio-pill"><input type="radio" name="p9_usa_ferramentas" value="Não"> Não</label>
+            </div>
+          </div>
+
+          <div class="sub-question margin-top-md" id="p9_quais_wrapper">
+            <label for="p9_quais">b) Se sim, quais ferramentas você utiliza?</label>
+            <input type="text" id="p9_quais" placeholder="Ex: Whatsapp, Excel, Cropwise, Solinftec...">
+          </div>
+
+          <div class="sub-question margin-top-md">
+            <label>c) Quantos sistemas/apps diferentes você precisa usar?</label>
+            <div class="radio-group-pills">
+              <label class="radio-pill"><input type="radio" name="p9_qtd_sistemas" value="1–2"> 1–2</label>
+              <label class="radio-pill"><input type="radio" name="p9_qtd_sistemas" value="3–4"> 3–4</label>
+              <label class="radio-pill"><input type="radio" name="p9_qtd_sistemas" value="5–7"> 5–7</label>
+              <label class="radio-pill"><input type="radio" name="p9_qtd_sistemas" value="8+"> 8+</label>
+              <label class="radio-pill"><input type="radio" name="p9_qtd_sistemas" value="Não sei"> Não sei</label>
+            </div>
+          </div>
+
+          <div class="sub-question margin-top-md">
+            <label for="p9_gosta_menos">d) Dessas ferramentas, qual você mais gosta? E qual você menos gosta?</label>
+            <div class="grid-2 margin-top-sm">
+              <input type="text" id="p9_mais_gosta" placeholder="Mais gosta: ex. Whatsapp pela agilidade">
+              <input type="text" id="p9_menos_gosta" placeholder="Menos gosta: ex. Sistemas burocráticos">
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ================= BLOCO 2: AWARENESS E USO (CONDICIONAIS P3) ================= -->
+      <div class="block-section" id="bloco2" style="display: none;">
+        <div class="block-banner">
+          <span class="block-tag">BLOCO 2 · AWARENESS E USO</span>
+          <h2>Desdobramentos por Plataforma</h2>
+          <p>Perguntas condicionais geradas pelas respostas marcadas na Matriz P3.</p>
+        </div>
+
+        <!-- P10 Condicional: Conheço, nunca usei -->
+        <div class="card question-card cond-card" id="q_p10" style="display: none;">
+          <div class="question-header">
+            <span class="q-number">P10</span>
+            <span class="q-tag-cond">Condicional: Conheço, nunca usei</span>
+          </div>
+          <h3>Das que você conhece mas nunca usou: qual delas e o que te impediu de começar?</h3>
+          
+          <div class="form-group margin-top-md">
+            <label for="p10_plataforma">a) Qual plataforma?</label>
+            <select id="p10_plataforma">
+              <option value="">Selecione...</option>
+            </select>
+          </div>
+
+          <div class="form-group margin-top-md">
+            <label>b) O que te impediu de começar?</label>
+            <div class="options-list">
+              <label class="option-card"><input type="radio" name="p10_motivo" value="Não sabia como começar / cadastrar"><span class="option-text">Não sabia como começar / cadastrar</span></label>
+              <label class="option-card"><input type="radio" name="p10_motivo" value="Não vi necessidade ainda"><span class="option-text">Não vi necessidade ainda</span></label>
+              <label class="option-card"><input type="radio" name="p10_motivo" value="Achei complicado"><span class="option-text">Achei complicado</span></label>
+              <label class="option-card"><input type="radio" name="p10_motivo" value="Ninguém me apresentou / explicou"><span class="option-text">Ninguém me apresentou / explicou</span></label>
+              <label class="option-card"><input type="radio" name="p10_motivo" value="Faltou um benefício claro pra valer a pena"><span class="option-text">Faltou um benefício claro pra valer a pena</span></label>
+              <label class="option-card option-other">
+                <input type="radio" name="p10_motivo" value="Outro">
+                <span class="option-text">Outro:</span>
+                <input type="text" id="p10_outro" class="input-inline" placeholder="Especifique...">
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- P11 Condicional: Uso atualmente -->
+        <div class="card question-card cond-card" id="q_p11" style="display: none;">
+          <div class="question-header">
+            <span class="q-number">P11</span>
+            <span class="q-tag-cond">Condicional: Uso atualmente</span>
+          </div>
+          <h3>Das que você usa hoje: qual delas, pra que você usa e o que mais gosta?</h3>
+          
+          <div class="form-group margin-top-md">
+            <label for="p11_plataforma">a) Qual plataforma você mais usa?</label>
+            <select id="p11_plataforma">
+              <option value="">Selecione...</option>
+            </select>
+          </div>
+
+          <div class="form-group margin-top-md">
+            <label for="p11_descricao">b) Pra que você usa e o que mais gosta nela?</label>
+            <textarea id="p11_descricao" rows="2" placeholder="Descreva o uso prático e os pontos fortes..."></textarea>
+          </div>
+        </div>
+
+        <!-- P12 Condicional: Já usei, parei -->
+        <div class="card question-card cond-card" id="q_p12" style="display: none;">
+          <div class="question-header">
+            <span class="q-number">P12</span>
+            <span class="q-tag-cond">Condicional: Já usei, parei (Churn)</span>
+          </div>
+          <h3>Das que você parou de usar: qual delas, e qual foi o principal motivo?</h3>
+          
+          <div class="form-group margin-top-md">
+            <label for="p12_plataforma">a) Qual plataforma?</label>
+            <select id="p12_plataforma">
+              <option value="">Selecione...</option>
+            </select>
+          </div>
+
+          <div class="form-group margin-top-md">
+            <label>b) Qual o principal motivo?</label>
+            <div class="options-list">
+              <label class="option-card"><input type="radio" name="p12_motivo" value="Difícil de usar"><span class="option-text">Difícil de usar</span></label>
+              <label class="option-card"><input type="radio" name="p12_motivo" value="Não vi benefício prático"><span class="option-text">Não vi benefício prático</span></label>
+              <label class="option-card"><input type="radio" name="p12_motivo" value="Demora no processamento (pontos, cashback, crédito)"><span class="option-text">Demora no processamento (pontos, cashback, crédito)</span></label>
+              <label class="option-card"><input type="radio" name="p12_motivo" value="Preferi outra solução"><span class="option-text">Preferi outra solução</span></label>
+              <label class="option-card"><input type="radio" name="p12_motivo" value="Minha equipe não aderiu"><span class="option-text">Minha equipe não aderiu</span></label>
+              <label class="option-card option-other">
+                <input type="radio" name="p12_motivo" value="Outro">
+                <span class="option-text">Outro:</span>
+                <input type="text" id="p12_outro" class="input-inline" placeholder="Especifique...">
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- P13 Condicional: Não conheço -->
+        <div class="card question-card cond-card" id="q_p13" style="display: none;">
+          <div class="question-header">
+            <span class="q-number">P13</span>
+            <span class="q-tag-cond">Condicional: Não conheço</span>
+          </div>
+          <h3>Das que você não conhece: por onde você normalmente fica sabendo de ferramentas novas do setor?</h3>
+          <div class="options-list margin-top-md">
+            <label class="option-card"><input type="radio" name="p13_canal" value="RTV / consultor da Syngenta"><span class="option-text">RTV / consultor da Syngenta</span></label>
+            <label class="option-card"><input type="radio" name="p13_canal" value="Revenda ou cooperativa onde compro"><span class="option-text">Revenda ou cooperativa onde compro</span></label>
+            <label class="option-card"><input type="radio" name="p13_canal" value="Feiras e eventos do setor"><span class="option-text">Feiras e eventos do setor</span></label>
+            <label class="option-card"><input type="radio" name="p13_canal" value="Grupos de WhatsApp / colegas do setor"><span class="option-text">Grupos de WhatsApp / colegas do setor</span></label>
+            <label class="option-card"><input type="radio" name="p13_canal" value="Redes sociais e internet"><span class="option-text">Redes sociais e internet</span></label>
+            <label class="option-card"><input type="radio" name="p13_canal" value="Não costumo ficar sabendo de novidades"><span class="option-text">Não costumo ficar sabendo de novidades</span></label>
+            <label class="option-card option-other">
+              <input type="radio" name="p13_canal" value="Outro">
+              <span class="option-text">Outro:</span>
+              <input type="text" id="p13_outro" class="input-inline" placeholder="Especifique...">
+            </label>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ================= BLOCO 3: DORES POR TEMA ================= -->
+      <div class="block-section" id="bloco3" style="display: none;">
+        <div class="block-banner">
+          <span class="block-tag">BLOCO 3 · DORES POR TEMA</span>
+          <h2>Crédito, Fidelidade e Gestão</h2>
+          <p>Validação de problemas do mercado e propostas de valor.</p>
+        </div>
+
+        <!-- P14 -->
+        <div class="card question-card" id="q_p14">
+          <div class="question-header">
+            <span class="q-number">P14</span>
+            <span class="q-type">Única Escolha</span>
+          </div>
+          <h3>Numa análise de crédito, o que mais pesa pra você?</h3>
+          <div class="options-list">
+            <label class="option-card"><input type="radio" name="p14_credito_pesam" value="Rapidez na aprovação"><span class="option-text">Rapidez na aprovação</span></label>
+            <label class="option-card"><input type="radio" name="p14_credito_pesam" value="Transparência no status da proposta"><span class="option-text">Transparência no status da proposta</span></label>
+            <label class="option-card"><input type="radio" name="p14_credito_pesam" value="Taxas e condições claras"><span class="option-text">Taxas e condições claras</span></label>
+            <label class="option-card"><input type="radio" name="p14_credito_pesam" value="Menos documentação / menos burocracia"><span class="option-text">Menos documentação / menos burocracia</span></label>
+            <label class="option-card"><input type="radio" name="p14_credito_pesam" value="Já ter crédito pré-aprovado pelo meu histórico"><span class="option-text">Já ter crédito pré-aprovado pelo meu histórico</span></label>
+            <label class="option-card option-other">
+              <input type="radio" name="p14_credito_pesam" value="Outro">
+              <span class="option-text">Outro:</span>
+              <input type="text" id="p14_outro" class="input-inline" placeholder="Especifique...">
+            </label>
+          </div>
+        </div>
+
+        <!-- P15 Condicional Syde/Perfil -->
+        <div class="card question-card cond-card" id="q_p15">
+          <div class="question-header">
+            <span class="q-number">P15</span>
+            <span class="q-tag-cond">Condicional: Histórico de Crédito (Syde / Produtor / Revenda)</span>
+          </div>
+          <h3>Como foi a última vez que você buscou crédito para a safra?</h3>
+          <div class="form-group margin-top-md">
+            <label for="p15_onde">a) Onde e como você conseguiu?</label>
+            <input type="text" id="p15_onde" placeholder="Ex: Banco, revenda, cooperativa, direto com fornecedor...">
+          </div>
+          <div class="form-group margin-top-md">
+            <label for="p15_dificuldade">b) O que foi mais difícil nesse processo?</label>
+            <textarea id="p15_dificuldade" rows="2" placeholder="Descreva os gargalos ou dificuldades..."></textarea>
+          </div>
+        </div>
+
+        <!-- P16 -->
+        <div class="card question-card" id="q_p16">
+          <div class="question-header">
+            <span class="q-number">P16</span>
+            <span class="q-type">Única Escolha</span>
+          </div>
+          <h3>Como você avalia os programas de benefícios/fidelidade das empresas de insumos que compra?</h3>
+          <div class="options-list">
+            <label class="option-card"><input type="radio" name="p16_fidelidade" value="Uso e gosto, resgato os benefícios"><span class="option-text">Uso e gosto, resgato os benefícios</span></label>
+            <label class="option-card"><input type="radio" name="p16_fidelidade" value="Participo mas esqueço de usar"><span class="option-text">Participo mas esqueço de usar</span></label>
+            <label class="option-card"><input type="radio" name="p16_fidelidade" value="Os benefícios não valem o esforço"><span class="option-text">Os benefícios não valem o esforço</span></label>
+            <label class="option-card"><input type="radio" name="p16_fidelidade" value="Nunca participei de nenhum"><span class="option-text">Nunca participei de nenhum</span></label>
+            <label class="option-card"><input type="radio" name="p16_fidelidade" value="Não sabia que existiam"><span class="option-text">Não sabia que existiam</span></label>
+            <label class="option-card option-other">
+              <input type="radio" name="p16_fidelidade" value="Outro">
+              <span class="option-text">Outro:</span>
+              <input type="text" id="p16_outro" class="input-inline" placeholder="Especifique...">
+            </label>
+          </div>
+        </div>
+
+        <!-- P17 Condicional Acessa Agro -->
+        <div class="card question-card cond-card" id="q_p17">
+          <div class="question-header">
+            <span class="q-number">P17</span>
+            <span class="q-tag-cond">Condicional: Acessa Agro / Fidelidade</span>
+          </div>
+          <h3>O que faria esse tipo de programa valer mais a pena pra você?</h3>
+          <div class="form-group margin-top-md">
+            <textarea id="p17_valer_pena" rows="2" placeholder="Resposta aberta do respondente..."></textarea>
+          </div>
+        </div>
+
+        <!-- P18 -->
+        <div class="card question-card" id="q_p18">
+          <div class="question-header">
+            <span class="q-number">P18</span>
+            <span class="q-type">Única Escolha (Mede dor do Sync)</span>
+          </div>
+          <h3>Na gestão do dia a dia (equipe, acessos, cadastros), quais desafios você enfrenta?</h3>
+          <div class="options-list">
+            <label class="option-card"><input type="radio" name="p18_desafios_gestao" value="Controlar quem acessa o quê nos sistemas"><span class="option-text">Controlar quem acessa o quê nos sistemas</span></label>
+            <label class="option-card"><input type="radio" name="p18_desafios_gestao" value="Cadastrar/descadastrar pessoas"><span class="option-text">Cadastrar/descadastrar pessoas</span></label>
+            <label class="option-card"><input type="radio" name="p18_desafios_gestao" value="Comunicação com a equipe de campo"><span class="option-text">Comunicação com a equipe de campo</span></label>
+            <label class="option-card"><input type="radio" name="p18_desafios_gestao" value="Acompanhar desempenho da equipe"><span class="option-text">Acompanhar desempenho da equipe</span></label>
+            <label class="option-card"><input type="radio" name="p18_desafios_gestao" value="Não tenho esse desafio"><span class="option-text">Não tenho esse desafio</span></label>
+            <label class="option-card option-other">
+              <input type="radio" name="p18_desafios_gestao" value="Outro">
+              <span class="option-text">Outro:</span>
+              <input type="text" id="p18_outro" class="input-inline" placeholder="Especifique...">
+            </label>
+          </div>
+        </div>
+
+        <!-- P19 Condicional Visita RTV -->
+        <div class="card question-card cond-card" id="q_p19">
+          <div class="question-header">
+            <span class="q-number">P19</span>
+            <span class="q-tag-cond">Condicional: Relacionamento RTV Syngenta</span>
+          </div>
+          <h3>Quando o RTV da Syngenta te visita, como você avalia a experiência?</h3>
+          <div class="form-group margin-top-md">
+            <label>a) Classificação da visita:</label>
+            <div class="radio-group-pills">
+              <label class="radio-pill"><input type="radio" name="p19_rtv_avaliacao" value="Muito boa"> Muito boa</label>
+              <label class="radio-pill"><input type="radio" name="p19_rtv_avaliacao" value="Boa"> Boa</label>
+              <label class="radio-pill"><input type="radio" name="p19_rtv_avaliacao" value="Regular"> Regular</label>
+              <label class="radio-pill"><input type="radio" name="p19_rtv_avaliacao" value="Ruim"> Ruim</label>
+              <label class="radio-pill"><input type="radio" name="p19_rtv_avaliacao" value="Nunca recebi visita"> Nunca recebi visita</label>
+            </div>
+          </div>
+          <div class="form-group margin-top-md">
+            <label for="p19_rtv_porque">b) Por quê? <span class="tag-new">NOVO</span></label>
+            <textarea id="p19_rtv_porque" rows="2" placeholder="Justificativa aberta..."></textarea>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ================= ENCERRAMENTO E RECRUTAMENTO ================= -->
+      <div class="block-section" id="blocoEncerramento" style="display: none;">
+        <div class="block-banner">
+          <span class="block-tag">ENCERRAMENTO</span>
+          <h2>Escuta Aberta & Recrutamento Qualitativo</h2>
+          <p>Últimas perguntas e convite para entrevista 1:1.</p>
+        </div>
+
+        <!-- P20 -->
+        <div class="card question-card" id="q_p20">
+          <div class="question-header">
+            <span class="q-number">P20</span>
+            <span class="q-type">Resposta Aberta</span>
+          </div>
+          <h3>Antes de terminar: tem alguma experiência com a Syngenta que você queira compartilhar?</h3>
+          <div class="form-group margin-top-md">
+            <textarea id="p20_experiencia_livre" rows="3" placeholder="Elogios, frustrações, histórias do dia a dia..."></textarea>
+          </div>
+        </div>
+
+        <!-- P21 -->
+        <div class="card question-card" id="q_p21">
+          <div class="question-header">
+            <span class="q-number">P21</span>
+            <span class="q-type">Recrutamento (LGPD Opt-in)</span>
+          </div>
+          <h3>Podemos te procurar para uma conversa rápida de 10 min sobre esses temas?</h3>
+          
+          <div class="radio-group-inline margin-top-md">
+            <label class="radio-pill"><input type="radio" name="p21_recrutamento" value="Sim" required> Sim</label>
+            <label class="radio-pill"><input type="radio" name="p21_recrutamento" value="Não"> Não</label>
+          </div>
+
+          <div class="recruitment-fields margin-top-md" id="p21_contato_fields" style="display: none;">
+            <div class="grid-2">
+              <div class="form-group">
+                <label for="p21_nome">Nome Completo:</label>
+                <input type="text" id="p21_nome" placeholder="Ex: Carlos Eduardo">
+              </div>
+              <div class="form-group">
+                <label for="p21_contato">Telefone / WhatsApp ou E-mail:</label>
+                <input type="text" id="p21_contato" placeholder="Ex: (66) 99988-7766">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card action-card">
+          <button type="submit" class="btn btn-success btn-large" id="submitSurveyBtn">
+            ✅ Salvar e Enviar para o Firebase / Nuvem
+          </button>
+        </div>
+      </div>
+
+    </form>
+
+    <!-- Tela de Sucesso / Conclusão -->
+    <section class="card success-card" id="successSection" style="display: none;">
+      <div class="success-icon">🎉</div>
+      <h2>Pesquisa Registrada com Sucesso!</h2>
+      <p id="successMessageDetails">A resposta foi gravada no tablet e sincronizada com o Firebase Firestore.</p>
+      
+      <div class="submission-summary-box margin-top-md">
+        <div class="summary-item">
+          <span class="lbl">ID da Submissão:</span>
+          <span class="val" id="summarySubId">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="lbl">Pesquisador:</span>
+          <span class="val" id="summaryInterviewer">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="lbl">Modo:</span>
+          <span class="val" id="summaryMode">-</span>
+        </div>
+        <div class="summary-item">
+          <span class="lbl">Status Firebase:</span>
+          <span class="val" id="summarySyncStatus">-</span>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-large margin-top-lg" id="newSurveyBtn">
+        🔄 Iniciar Nova Pesquisa
+      </button>
+    </section>
+
+  </main>
+
+
+  <!-- Modal de Configuração do Firebase & Gerenciador de Dados -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>🔥 Configuração Firebase Firestore (Opção 2)</h2>
+        <button class="close-modal-btn" id="closeSettingsBtn">&times;</button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="tabs-header">
+          <button class="tab-btn active" id="tabEndpointBtn">Credenciais Firebase</button>
+          <button class="tab-btn" id="tabDataBtn">Respostas Salvas (<span id="modalSavedCount">0</span>)</button>
+        </div>
+
+        <!-- Aba 1: Configuração Firebase -->
+        <div class="tab-content" id="tabEndpointContent">
+          <p class="text-sm">Insira o projeto do **Firebase Firestore**. O SDK possui persistência offline nativa para os tablets na ANDAV.</p>
+          
+          <div class="form-group margin-top-md">
+            <label for="firebaseApiKey">API Key do Firebase:</label>
+            <input type="text" id="firebaseApiKey" placeholder="AIzaSy...">
+          </div>
+
+          <div class="grid-2 margin-top-md">
+            <div class="form-group">
+              <label for="firebaseProjectId">Project ID:</label>
+              <input type="text" id="firebaseProjectId" placeholder="pesquisa-andav-syngenta">
+            </div>
+            <div class="form-group">
+              <label for="firebaseAppId">App ID:</label>
+              <input type="text" id="firebaseAppId" placeholder="1:12345678:web:abcde...">
+            </div>
+          </div>
+
+          <div class="flex-buttons margin-top-md">
+            <button class="btn btn-secondary" id="testApiBtn">🧪 Conectar ao Firebase</button>
+            <button class="btn btn-primary" id="saveApiConfigBtn">💾 Salvar Credenciais</button>
+          </div>
+          
+          <div class="alert-box margin-top-md" id="apiTestResult" style="display: none;"></div>
+        </div>
+
+        <!-- Aba 2: Gerenciador de Dados -->
+        <div class="tab-content" id="tabDataContent" style="display: none;">
+          <div class="data-summary-bar">
+            <div>
+              <strong>Total Coletado:</strong> <span id="statTotal">0</span> | 
+              <strong>Sincronizados:</strong> <span id="statSynced">0</span> | 
+              <strong>Pendentes:</strong> <span id="statPending" class="highlight-yellow">0</span>
+            </div>
+            <button class="btn btn-sm btn-success" id="manualSyncBtn">⚡ Sync Firebase Agora</button>
+          </div>
+
+          <div class="table-responsive margin-top-md">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Data/Hora</th>
+                  <th>Pesquisador</th>
+                  <th>Atividade</th>
+                  <th>Modo</th>
+                  <th>Status Sync</th>
+                </tr>
+              </thead>
+              <tbody id="savedDataTableBody">
+                <tr><td colspan="5" class="text-center">Nenhuma resposta registrada ainda.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="flex-buttons margin-top-lg">
+            <button class="btn btn-secondary" id="exportCsvBtn">📥 Baixar Excel / CSV</button>
+            <button class="btn btn-secondary" id="exportJsonBtn">📄 Baixar JSON</button>
+            <button class="btn btn-danger" id="clearDataBtn">🗑️ Limpar Dados Locais</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
