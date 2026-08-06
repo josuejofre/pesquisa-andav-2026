@@ -51,14 +51,14 @@ document.addEventListener('DOMContentLoaded', () => {
   initApp();
 });
 
-function initApp() {
+async function initApp() {
   loadSavedConfig();
-  initFirebaseIfConfigured();
+  await initFirebaseIfConfigured();
   bindEvents();
   initVoiceRecorders();
   updateSyncStatusBadge();
   updateSavedCountModal();
-  pullRemoteDataFromFirebase();
+  await pullRemoteDataFromFirebase();
 }
 
 /* ==========================================================================
@@ -93,7 +93,7 @@ function loadSavedConfig() {
   }
 }
 
-function initFirebaseIfConfigured() {
+async function initFirebaseIfConfigured() {
   if (typeof firebase === 'undefined') return;
 
   const savedConfigStr = localStorage.getItem(STORAGE_KEYS.FIREBASE_CONFIG);
@@ -114,14 +114,12 @@ function initFirebaseIfConfigured() {
       
       appState.db = firebase.firestore();
       
-      // Persistência Offline Nativa Firestore
-      appState.db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
-        if (err.code == 'failed-precondition') {
-          console.warn('[Firebase] Persistência limitada a uma aba.');
-        } else if (err.code == 'unimplemented') {
-          console.warn('[Firebase] Navegador não suporta persistência nativa.');
-        }
-      });
+      // Persistência Offline Nativa Firestore (Tratada com await para compatibilidade com abas anônimas)
+      try {
+        await appState.db.enablePersistence({ synchronizeTabs: false });
+      } catch (err) {
+        console.warn('[Firebase Persistence Note]', err.code || err.message);
+      }
 
       appState.isFirebaseActive = true;
       console.log('[Firebase Firestore] Inicializado com sucesso!');
