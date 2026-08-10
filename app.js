@@ -519,9 +519,8 @@ function evaluateConditionalQuestions() {
   const p12Platforms = Object.keys(p3).filter(key => p3[key] === 'ja_usei_parei');
   renderP12Cards(p12Platforms);
 
-  // P13: Não conheço — card único genérico
-  const p13Platforms = Object.keys(p3).filter(key => p3[key] === 'nao_conheco');
-  renderP13Card(p13Platforms);
+  // P13: Canal de descoberta — sempre exibido no modo completo
+  renderP13Card();
 
   const atividade = getRadioValue('p1_atividade');
   const isPerfilCredito = ['Produtor rural', 'Revenda / distribuidor de insumos', 'Cooperativa'].includes(atividade);
@@ -642,22 +641,20 @@ function renderP12Cards(platformKeys) {
   initVoiceRecorders();
 }
 
-function renderP13Card(platformKeys) {
+function renderP13Card() {
   const container = document.getElementById('q_p13_container');
   if (!container) return;
   container.innerHTML = '';
-  if (platformKeys.length === 0) return;
 
-  const platNames = platformKeys.map(k => PLATFORM_NAMES[k] || k).join(', ');
   const card = document.createElement('div');
-  card.className = 'card question-card cond-card';
+  card.className = 'card question-card';
   card.id = 'q_p13';
   card.innerHTML = `
     <div class="question-header">
       <span class="q-number">P13</span>
-      <span class="q-tag-cond">Não conheço (${platNames})</span>
+      <span class="q-type">Canal de Descoberta</span>
     </div>
-    <h3>Por onde você normalmente fica sabendo de ferramentas novas do setor?</h3>
+    <h3>Por onde você normalmente fica sabendo de ferramentas e novidades do setor?</h3>
     <div class="options-list margin-top-md">
       <label class="option-card"><input type="radio" name="p13_canal" value="RTV / consultor da Syngenta"><span class="option-text">RTV / consultor da Syngenta</span></label>
       <label class="option-card"><input type="radio" name="p13_canal" value="Revenda ou cooperativa onde compro"><span class="option-text">Revenda ou cooperativa onde compro</span></label>
