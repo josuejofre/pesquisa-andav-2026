@@ -1262,6 +1262,20 @@ async function forceManualSync() {
 }
 
 /* EXPORTAÇÃO COMPLETA E ORGANIZADA EM CSV (EXCEL BOM UTF-8) */
+function formatDateBrasilia(isoString) {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  return d.toLocaleString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).replace(',', '');
+}
+
 function exportDataAsCSV() {
   const responses = getSavedResponses();
   if (responses.length === 0) {
@@ -1316,7 +1330,7 @@ function exportDataAsCSV() {
 
     const row = [
       escapeCsv(r.id_submissao),
-      escapeCsv(r.created_at),
+      escapeCsv(formatDateBrasilia(r.created_at)),
       escapeCsv(r.metadata?.entrevistador),
       escapeCsv(r.metadata?.dispositivo_id),
       escapeCsv(r.metadata?.modo_aplicacao),
