@@ -1147,3 +1147,15 @@ textarea:focus {
   border-radius: 4px;
   transition: width 0.4s ease;
 }
+
+/* Destaque do nome da plataforma nos cards dinâmicos P10/P11/P12 */
+.platform-highlight {
+  color: var(--syngenta-green-light);
+  font-weight: 700;
+  background: rgba(16, 185, 129, 0.12);
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  display: inline-block;
+  margin-right: 4px;
+}

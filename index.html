@@ -348,7 +348,7 @@
           <p>Você completou o Bloco 0 (2-3 min). O participante tem mais tempo para continuar?</p>
           <div class="flex-buttons">
             <button type="button" class="btn btn-secondary" id="btnFinishEssencial">
-              🛑 Encerrar Aqui e Ir para Recrutamento (P21)
+              🛑 Encerrar e ir para Contato
             </button>
             <button type="button" class="btn btn-primary" id="btnContinueCompleto">
               ➡️ Continuar para Bloco Completo (7-9 min)
@@ -473,112 +473,17 @@
           <p>Perguntas condicionais geradas pelas respostas marcadas na Matriz P3.</p>
         </div>
 
-        <!-- P10 Condicional: Conheço, nunca usei -->
-        <div class="card question-card cond-card" id="q_p10" style="display: none;">
-          <div class="question-header">
-            <span class="q-number">P10</span>
-            <span class="q-tag-cond">Condicional: Conheço, nunca usei</span>
-          </div>
-          <h3>Das que você conhece mas nunca usou: qual delas e o que te impediu de começar?</h3>
-          
-          <div class="form-group margin-top-md">
-            <label for="p10_plataforma">a) Qual plataforma?</label>
-            <select id="p10_plataforma">
-              <option value="">Selecione...</option>
-            </select>
-          </div>
+        <!-- P10 Condicional: Conheço, nunca usei — gerado dinamicamente por plataforma -->
+        <div id="q_p10_container"></div>
 
-          <div class="form-group margin-top-md">
-            <label>b) O que te impediu de começar?</label>
-            <div class="options-list">
-              <label class="option-card"><input type="radio" name="p10_motivo" value="Não sabia como começar / cadastrar"><span class="option-text">Não sabia como começar / cadastrar</span></label>
-              <label class="option-card"><input type="radio" name="p10_motivo" value="Não vi necessidade ainda"><span class="option-text">Não vi necessidade ainda</span></label>
-              <label class="option-card"><input type="radio" name="p10_motivo" value="Achei complicado"><span class="option-text">Achei complicado</span></label>
-              <label class="option-card"><input type="radio" name="p10_motivo" value="Ninguém me apresentou / explicou"><span class="option-text">Ninguém me apresentou / explicou</span></label>
-              <label class="option-card"><input type="radio" name="p10_motivo" value="Faltou um benefício claro pra valer a pena"><span class="option-text">Faltou um benefício claro pra valer a pena</span></label>
-              <label class="option-card option-other">
-                <input type="radio" name="p10_motivo" value="Outro">
-                <span class="option-text">Outro:</span>
-                <input type="text" id="p10_outro" class="input-inline" placeholder="Especifique...">
-              </label>
-            </div>
-          </div>
-        </div>
+        <!-- P11 Condicional: Uso atualmente — gerado dinamicamente por plataforma -->
+        <div id="q_p11_container"></div>
 
-        <!-- P11 Condicional: Uso atualmente -->
-        <div class="card question-card cond-card" id="q_p11" style="display: none;">
-          <div class="question-header">
-            <span class="q-number">P11</span>
-            <span class="q-tag-cond">Condicional: Uso atualmente</span>
-          </div>
-          <h3>Das que você usa hoje: qual delas, pra que você usa e o que mais gosta?</h3>
-          
-          <div class="form-group margin-top-md">
-            <label for="p11_plataforma">a) Qual plataforma você mais usa?</label>
-            <select id="p11_plataforma">
-              <option value="">Selecione...</option>
-            </select>
-          </div>
+        <!-- P12 Condicional: Já usei, parei — gerado dinamicamente por plataforma -->
+        <div id="q_p12_container"></div>
 
-          <div class="form-group margin-top-md">
-            <label for="p11_descricao">b) Pra que você usa e o que mais gosta nela?</label>
-            <textarea id="p11_descricao" rows="2" placeholder="Descreva o uso prático e os pontos fortes..."></textarea>
-          </div>
-        </div>
-
-        <!-- P12 Condicional: Já usei, parei -->
-        <div class="card question-card cond-card" id="q_p12" style="display: none;">
-          <div class="question-header">
-            <span class="q-number">P12</span>
-            <span class="q-tag-cond">Condicional: Já usei, parei (Churn)</span>
-          </div>
-          <h3>Das que você parou de usar: qual delas, e qual foi o principal motivo?</h3>
-          
-          <div class="form-group margin-top-md">
-            <label for="p12_plataforma">a) Qual plataforma?</label>
-            <select id="p12_plataforma">
-              <option value="">Selecione...</option>
-            </select>
-          </div>
-
-          <div class="form-group margin-top-md">
-            <label>b) Qual o principal motivo?</label>
-            <div class="options-list">
-              <label class="option-card"><input type="radio" name="p12_motivo" value="Difícil de usar"><span class="option-text">Difícil de usar</span></label>
-              <label class="option-card"><input type="radio" name="p12_motivo" value="Não vi benefício prático"><span class="option-text">Não vi benefício prático</span></label>
-              <label class="option-card"><input type="radio" name="p12_motivo" value="Demora no processamento (pontos, cashback, crédito)"><span class="option-text">Demora no processamento (pontos, cashback, crédito)</span></label>
-              <label class="option-card"><input type="radio" name="p12_motivo" value="Preferi outra solução"><span class="option-text">Preferi outra solução</span></label>
-              <label class="option-card"><input type="radio" name="p12_motivo" value="Minha equipe não aderiu"><span class="option-text">Minha equipe não aderiu</span></label>
-              <label class="option-card option-other">
-                <input type="radio" name="p12_motivo" value="Outro">
-                <span class="option-text">Outro:</span>
-                <input type="text" id="p12_outro" class="input-inline" placeholder="Especifique...">
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <!-- P13 Condicional: Não conheço -->
-        <div class="card question-card cond-card" id="q_p13" style="display: none;">
-          <div class="question-header">
-            <span class="q-number">P13</span>
-            <span class="q-tag-cond">Condicional: Não conheço</span>
-          </div>
-          <h3>Das que você não conhece: por onde você normalmente fica sabendo de ferramentas novas do setor?</h3>
-          <div class="options-list margin-top-md">
-            <label class="option-card"><input type="radio" name="p13_canal" value="RTV / consultor da Syngenta"><span class="option-text">RTV / consultor da Syngenta</span></label>
-            <label class="option-card"><input type="radio" name="p13_canal" value="Revenda ou cooperativa onde compro"><span class="option-text">Revenda ou cooperativa onde compro</span></label>
-            <label class="option-card"><input type="radio" name="p13_canal" value="Feiras e eventos do setor"><span class="option-text">Feiras e eventos do setor</span></label>
-            <label class="option-card"><input type="radio" name="p13_canal" value="Grupos de WhatsApp / colegas do setor"><span class="option-text">Grupos de WhatsApp / colegas do setor</span></label>
-            <label class="option-card"><input type="radio" name="p13_canal" value="Redes sociais e internet"><span class="option-text">Redes sociais e internet</span></label>
-            <label class="option-card"><input type="radio" name="p13_canal" value="Não costumo ficar sabendo de novidades"><span class="option-text">Não costumo ficar sabendo de novidades</span></label>
-            <label class="option-card option-other">
-              <input type="radio" name="p13_canal" value="Outro">
-              <span class="option-text">Outro:</span>
-              <input type="text" id="p13_outro" class="input-inline" placeholder="Especifique...">
-            </label>
-          </div>
-        </div>
+        <!-- P13 Condicional: Não conheço — gerado dinamicamente -->
+        <div id="q_p13_container"></div>
       </div>
 
 

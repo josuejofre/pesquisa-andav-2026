@@ -507,20 +507,21 @@ function handleP3Change() {
 function evaluateConditionalQuestions() {
   const p3 = appState.p3State;
 
+  // P10: Conheço, nunca usei — um card por plataforma
   const p10Platforms = Object.keys(p3).filter(key => p3[key] === 'conheco_nunca_usei');
-  updateDropdownOptions('p10_plataforma', p10Platforms);
-  document.getElementById('q_p10').style.display = p10Platforms.length > 0 ? 'block' : 'none';
+  renderP10Cards(p10Platforms);
 
+  // P11: Uso atualmente — um card por plataforma
   const p11Platforms = Object.keys(p3).filter(key => p3[key] === 'uso_atualmente');
-  updateDropdownOptions('p11_plataforma', p11Platforms);
-  document.getElementById('q_p11').style.display = p11Platforms.length > 0 ? 'block' : 'none';
+  renderP11Cards(p11Platforms);
 
+  // P12: Já usei, parei — um card por plataforma
   const p12Platforms = Object.keys(p3).filter(key => p3[key] === 'ja_usei_parei');
-  updateDropdownOptions('p12_plataforma', p12Platforms);
-  document.getElementById('q_p12').style.display = p12Platforms.length > 0 ? 'block' : 'none';
+  renderP12Cards(p12Platforms);
 
+  // P13: Não conheço — card único genérico
   const p13Platforms = Object.keys(p3).filter(key => p3[key] === 'nao_conheco');
-  document.getElementById('q_p13').style.display = p13Platforms.length > 0 ? 'block' : 'none';
+  renderP13Card(p13Platforms);
 
   const atividade = getRadioValue('p1_atividade');
   const isPerfilCredito = ['Produtor rural', 'Revenda / distribuidor de insumos', 'Cooperativa'].includes(atividade);
@@ -535,21 +536,143 @@ function evaluateConditionalQuestions() {
   updateProgressBar();
 }
 
-function updateDropdownOptions(selectId, platformKeys) {
-  const select = document.getElementById(selectId);
-  const currentVal = select.value;
-  select.innerHTML = '<option value="">Selecione a plataforma...</option>';
-  
-  platformKeys.forEach(key => {
-    const opt = document.createElement('option');
-    opt.value = key;
-    opt.textContent = PLATFORM_NAMES[key] || key;
-    select.appendChild(opt);
+function renderP10Cards(platformKeys) {
+  const container = document.getElementById('q_p10_container');
+  if (!container) return;
+  container.innerHTML = '';
+  if (platformKeys.length === 0) return;
+
+  platformKeys.forEach((key, idx) => {
+    const platName = PLATFORM_NAMES[key] || key;
+    const num = idx === 0 ? 'P10' : `P10.${idx + 1}`;
+    const card = document.createElement('div');
+    card.className = 'card question-card cond-card';
+    card.id = `q_p10_${key}`;
+    card.innerHTML = `
+      <div class="question-header">
+        <span class="q-number">${num}</span>
+        <span class="q-tag-cond">Conheço, nunca usei</span>
+      </div>
+      <h3><span class="platform-highlight">${platName}</span> — o que te impediu de começar?</h3>
+      <div class="form-group margin-top-md">
+        <div class="options-list">
+          <label class="option-card"><input type="radio" name="p10_motivo_${key}" value="Não sabia como começar / cadastrar"><span class="option-text">Não sabia como começar / cadastrar</span></label>
+          <label class="option-card"><input type="radio" name="p10_motivo_${key}" value="Não vi necessidade ainda"><span class="option-text">Não vi necessidade ainda</span></label>
+          <label class="option-card"><input type="radio" name="p10_motivo_${key}" value="Achei complicado"><span class="option-text">Achei complicado</span></label>
+          <label class="option-card"><input type="radio" name="p10_motivo_${key}" value="Ninguém me apresentou / explicou"><span class="option-text">Ninguém me apresentou / explicou</span></label>
+          <label class="option-card"><input type="radio" name="p10_motivo_${key}" value="Faltou um benefício claro pra valer a pena"><span class="option-text">Faltou um benefício claro pra valer a pena</span></label>
+          <label class="option-card option-other">
+            <input type="radio" name="p10_motivo_${key}" value="Outro">
+            <span class="option-text">Outro:</span>
+            <input type="text" id="p10_outro_${key}" class="input-inline" placeholder="Especifique...">
+          </label>
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
   });
 
-  if (platformKeys.includes(currentVal)) {
-    select.value = currentVal;
-  }
+  initVoiceRecorders();
+}
+
+function renderP11Cards(platformKeys) {
+  const container = document.getElementById('q_p11_container');
+  if (!container) return;
+  container.innerHTML = '';
+  if (platformKeys.length === 0) return;
+
+  platformKeys.forEach((key, idx) => {
+    const platName = PLATFORM_NAMES[key] || key;
+    const num = idx === 0 ? 'P11' : `P11.${idx + 1}`;
+    const card = document.createElement('div');
+    card.className = 'card question-card cond-card';
+    card.id = `q_p11_${key}`;
+    card.innerHTML = `
+      <div class="question-header">
+        <span class="q-number">${num}</span>
+        <span class="q-tag-cond">Uso atualmente</span>
+      </div>
+      <h3><span class="platform-highlight">${platName}</span> — pra que você usa e o que mais gosta?</h3>
+      <div class="form-group margin-top-md">
+        <textarea id="p11_descricao_${key}" rows="2" placeholder="Descreva o uso prático e os pontos fortes da ${platName}..."></textarea>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+
+  initVoiceRecorders();
+}
+
+function renderP12Cards(platformKeys) {
+  const container = document.getElementById('q_p12_container');
+  if (!container) return;
+  container.innerHTML = '';
+  if (platformKeys.length === 0) return;
+
+  platformKeys.forEach((key, idx) => {
+    const platName = PLATFORM_NAMES[key] || key;
+    const num = idx === 0 ? 'P12' : `P12.${idx + 1}`;
+    const card = document.createElement('div');
+    card.className = 'card question-card cond-card';
+    card.id = `q_p12_${key}`;
+    card.innerHTML = `
+      <div class="question-header">
+        <span class="q-number">${num}</span>
+        <span class="q-tag-cond">Já usei, parei (Churn)</span>
+      </div>
+      <h3><span class="platform-highlight">${platName}</span> — qual o principal motivo de ter parado?</h3>
+      <div class="form-group margin-top-md">
+        <div class="options-list">
+          <label class="option-card"><input type="radio" name="p12_motivo_${key}" value="Difícil de usar"><span class="option-text">Difícil de usar</span></label>
+          <label class="option-card"><input type="radio" name="p12_motivo_${key}" value="Não vi benefício prático"><span class="option-text">Não vi benefício prático</span></label>
+          <label class="option-card"><input type="radio" name="p12_motivo_${key}" value="Demora no processamento (pontos, cashback, crédito)"><span class="option-text">Demora no processamento (pontos, cashback, crédito)</span></label>
+          <label class="option-card"><input type="radio" name="p12_motivo_${key}" value="Preferi outra solução"><span class="option-text">Preferi outra solução</span></label>
+          <label class="option-card"><input type="radio" name="p12_motivo_${key}" value="Minha equipe não aderiu"><span class="option-text">Minha equipe não aderiu</span></label>
+          <label class="option-card option-other">
+            <input type="radio" name="p12_motivo_${key}" value="Outro">
+            <span class="option-text">Outro:</span>
+            <input type="text" id="p12_outro_${key}" class="input-inline" placeholder="Especifique...">
+          </label>
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+
+  initVoiceRecorders();
+}
+
+function renderP13Card(platformKeys) {
+  const container = document.getElementById('q_p13_container');
+  if (!container) return;
+  container.innerHTML = '';
+  if (platformKeys.length === 0) return;
+
+  const platNames = platformKeys.map(k => PLATFORM_NAMES[k] || k).join(', ');
+  const card = document.createElement('div');
+  card.className = 'card question-card cond-card';
+  card.id = 'q_p13';
+  card.innerHTML = `
+    <div class="question-header">
+      <span class="q-number">P13</span>
+      <span class="q-tag-cond">Não conheço (${platNames})</span>
+    </div>
+    <h3>Por onde você normalmente fica sabendo de ferramentas novas do setor?</h3>
+    <div class="options-list margin-top-md">
+      <label class="option-card"><input type="radio" name="p13_canal" value="RTV / consultor da Syngenta"><span class="option-text">RTV / consultor da Syngenta</span></label>
+      <label class="option-card"><input type="radio" name="p13_canal" value="Revenda ou cooperativa onde compro"><span class="option-text">Revenda ou cooperativa onde compro</span></label>
+      <label class="option-card"><input type="radio" name="p13_canal" value="Feiras e eventos do setor"><span class="option-text">Feiras e eventos do setor</span></label>
+      <label class="option-card"><input type="radio" name="p13_canal" value="Grupos de WhatsApp / colegas do setor"><span class="option-text">Grupos de WhatsApp / colegas do setor</span></label>
+      <label class="option-card"><input type="radio" name="p13_canal" value="Redes sociais e internet"><span class="option-text">Redes sociais e internet</span></label>
+      <label class="option-card"><input type="radio" name="p13_canal" value="Não costumo ficar sabendo de novidades"><span class="option-text">Não costumo ficar sabendo de novidades</span></label>
+      <label class="option-card option-other">
+        <input type="radio" name="p13_canal" value="Outro">
+        <span class="option-text">Outro:</span>
+        <input type="text" id="p13_outro" class="input-inline" placeholder="Especifique...">
+      </label>
+    </div>
+  `;
+  container.appendChild(card);
 }
 
 function updateProgressBar() {
@@ -615,23 +738,12 @@ async function handleFormSubmit(e) {
       p9_menos_gosta: document.getElementById('p9_menos_gosta').value
     },
     bloco_2_awareness: {
-      p10_nunca_usou: {
-        plataforma: document.getElementById('p10_plataforma').value,
-        motivo: getRadioValue('p10_motivo'),
-        outro: document.getElementById('p10_outro').value
-      },
-      p11_uso_atual: {
-        plataforma: document.getElementById('p11_plataforma').value,
-        descricao: document.getElementById('p11_descricao').value
-      },
-      p12_parou_usar: {
-        plataforma: document.getElementById('p12_plataforma').value,
-        motivo: getRadioValue('p12_motivo'),
-        outro: document.getElementById('p12_outro').value
-      },
+      p10_nunca_usou: buildP10Data(),
+      p11_uso_atual: buildP11Data(),
+      p12_parou_usar: buildP12Data(),
       p13_nao_conhece: {
         canal: getRadioValue('p13_canal'),
-        outro: document.getElementById('p13_outro').value
+        outro: (document.getElementById('p13_outro') ? document.getElementById('p13_outro').value : '')
       }
     },
     bloco_3_dores: {
@@ -670,6 +782,45 @@ async function handleFormSubmit(e) {
   showSuccessScreen(payload);
   updateSyncStatusBadge();
   updateSavedCountModal();
+}
+
+/* Helpers para coleta de dados P10/P11/P12 por plataforma */
+function buildP10Data() {
+  const result = {};
+  Object.keys(appState.p3State).forEach(key => {
+    if (appState.p3State[key] === 'conheco_nunca_usei') {
+      result[key] = {
+        motivo: getRadioValue(`p10_motivo_${key}`),
+        outro: (document.getElementById(`p10_outro_${key}`) || {}).value || ''
+      };
+    }
+  });
+  return result;
+}
+
+function buildP11Data() {
+  const result = {};
+  Object.keys(appState.p3State).forEach(key => {
+    if (appState.p3State[key] === 'uso_atualmente') {
+      result[key] = {
+        descricao: (document.getElementById(`p11_descricao_${key}`) || {}).value || ''
+      };
+    }
+  });
+  return result;
+}
+
+function buildP12Data() {
+  const result = {};
+  Object.keys(appState.p3State).forEach(key => {
+    if (appState.p3State[key] === 'ja_usei_parei') {
+      result[key] = {
+        motivo: getRadioValue(`p12_motivo_${key}`),
+        outro: (document.getElementById(`p12_outro_${key}`) || {}).value || ''
+      };
+    }
+  });
+  return result;
 }
 
 function saveResponseLocally(payload) {
@@ -1121,6 +1272,8 @@ function exportDataAsCSV() {
     return;
   }
 
+  const platforms = ['acessa_agro', 'syde', 'smart_engage', 'cropwise'];
+
   const headers = [
     'ID_Submissao', 'Data_Hora', 'Pesquisador', 'Dispositivo_Tablet', 'Modo_Aplicacao', 'Duracao_Segundos',
     'P1_Atividade', 'P1_Outro', 'P2_Papel', 'P2_Outro',
@@ -1128,9 +1281,22 @@ function exportDataAsCSV() {
     'P4_Dor_Compra', 'P4_Outro', 'P5_Dor_Credito', 'P5_Outro',
     'P6_Gosta', 'P6_Incomoda',
     'P7_Porte', 'P8_Estado', 'P9_Usa_Ferramentas', 'P9_Quais_Ferramentas', 'P9_Qtd_Sistemas', 'P9_Mais_Gosta', 'P9_Menos_Gosta',
-    'P10_Plataforma_Nao_Usou', 'P10_Motivo', 'P10_Outro',
-    'P11_Plataforma_Uso_Atual', 'P11_Descricao',
-    'P12_Plataforma_Parou_Usar', 'P12_Motivo', 'P12_Outro',
+    // P10 por plataforma
+    'P10_AcessaAgro_Motivo', 'P10_AcessaAgro_Outro',
+    'P10_Syde_Motivo', 'P10_Syde_Outro',
+    'P10_SmartEngage_Motivo', 'P10_SmartEngage_Outro',
+    'P10_Cropwise_Motivo', 'P10_Cropwise_Outro',
+    // P11 por plataforma
+    'P11_AcessaAgro_Descricao',
+    'P11_Syde_Descricao',
+    'P11_SmartEngage_Descricao',
+    'P11_Cropwise_Descricao',
+    // P12 por plataforma
+    'P12_AcessaAgro_Motivo', 'P12_AcessaAgro_Outro',
+    'P12_Syde_Motivo', 'P12_Syde_Outro',
+    'P12_SmartEngage_Motivo', 'P12_SmartEngage_Outro',
+    'P12_Cropwise_Motivo', 'P12_Cropwise_Outro',
+    // P13
     'P13_Canal_Nao_Conhece', 'P13_Outro',
     'P14_Credito_Pesa', 'P14_Outro',
     'P15_Credito_Onde', 'P15_Credito_Dificuldade',
@@ -1146,6 +1312,11 @@ function exportDataAsCSV() {
   const csvRows = [headers.join(';')];
 
   responses.forEach(r => {
+    const p10 = r.bloco_2_awareness?.p10_nunca_usou || {};
+    const p11 = r.bloco_2_awareness?.p11_uso_atual || {};
+    const p12 = r.bloco_2_awareness?.p12_parou_usar || {};
+    const p13 = r.bloco_2_awareness?.p13_nao_conhece || {};
+
     const row = [
       escapeCsv(r.id_submissao),
       escapeCsv(r.created_at),
@@ -1180,19 +1351,27 @@ function exportDataAsCSV() {
       escapeCsv(r.bloco_1_perfil?.p9_mais_gosta),
       escapeCsv(r.bloco_1_perfil?.p9_menos_gosta),
 
-      escapeCsv(r.bloco_2_awareness?.p10_nunca_usou?.plataforma),
-      escapeCsv(r.bloco_2_awareness?.p10_nunca_usou?.motivo),
-      escapeCsv(r.bloco_2_awareness?.p10_nunca_usou?.outro),
+      // P10 por plataforma
+      escapeCsv(p10.acessa_agro?.motivo), escapeCsv(p10.acessa_agro?.outro),
+      escapeCsv(p10.syde?.motivo),        escapeCsv(p10.syde?.outro),
+      escapeCsv(p10.smart_engage?.motivo),escapeCsv(p10.smart_engage?.outro),
+      escapeCsv(p10.cropwise?.motivo),    escapeCsv(p10.cropwise?.outro),
 
-      escapeCsv(r.bloco_2_awareness?.p11_uso_atual?.plataforma),
-      escapeCsv(r.bloco_2_awareness?.p11_uso_atual?.descricao),
+      // P11 por plataforma
+      escapeCsv(p11.acessa_agro?.descricao),
+      escapeCsv(p11.syde?.descricao),
+      escapeCsv(p11.smart_engage?.descricao),
+      escapeCsv(p11.cropwise?.descricao),
 
-      escapeCsv(r.bloco_2_awareness?.p12_parou_usar?.plataforma),
-      escapeCsv(r.bloco_2_awareness?.p12_parou_usar?.motivo),
-      escapeCsv(r.bloco_2_awareness?.p12_parou_usar?.outro),
+      // P12 por plataforma
+      escapeCsv(p12.acessa_agro?.motivo), escapeCsv(p12.acessa_agro?.outro),
+      escapeCsv(p12.syde?.motivo),        escapeCsv(p12.syde?.outro),
+      escapeCsv(p12.smart_engage?.motivo),escapeCsv(p12.smart_engage?.outro),
+      escapeCsv(p12.cropwise?.motivo),    escapeCsv(p12.cropwise?.outro),
 
-      escapeCsv(r.bloco_2_awareness?.p13_nao_conhece?.canal),
-      escapeCsv(r.bloco_2_awareness?.p13_nao_conhece?.outro),
+      // P13
+      escapeCsv(p13.canal),
+      escapeCsv(p13.outro),
 
       escapeCsv(r.bloco_3_dores?.p14_credito_pesam),
       escapeCsv(r.bloco_3_dores?.p14_outro),
