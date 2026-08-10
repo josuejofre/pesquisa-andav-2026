@@ -646,10 +646,8 @@ async function handleFormSubmit(e) {
       p17_fidelidade_valer_pena: document.getElementById('p17_valer_pena').value,
       p18_desafios_gestao: getRadioValue('p18_desafios_gestao'),
       p18_outro: document.getElementById('p18_outro').value,
-      p19_rtv: {
-        avaliacao: getRadioValue('p19_rtv_avaliacao'),
-        porque: document.getElementById('p19_rtv_porque').value
-      }
+      p19_rtv_assunto: getRadioValue('p19_rtv_assunto'),
+      p19_outro: document.getElementById('p19_outro') ? document.getElementById('p19_outro').value : ''
     },
     encerramentos: {
       p20_experiencia: document.getElementById('p20_experiencia_livre').value,
@@ -1139,7 +1137,7 @@ function exportDataAsCSV() {
     'P16_Fidelidade_Avaliacao', 'P16_Outro',
     'P17_Valer_Pena',
     'P18_Gestao_Desafio', 'P18_Outro',
-    'P19_RTV_Avaliacao', 'P19_RTV_Porque',
+    'P19_RTV_Assunto', 'P19_Outro',
     'P20_Experiencia_Livre',
     'P21_Recrutamento_OptIn', 'P21_Nome', 'P21_Contato',
     'Status_Sync_Firebase'
@@ -1209,8 +1207,8 @@ function exportDataAsCSV() {
       escapeCsv(r.bloco_3_dores?.p18_desafios_gestao),
       escapeCsv(r.bloco_3_dores?.p18_outro),
 
-      escapeCsv(r.bloco_3_dores?.p19_rtv?.avaliacao),
-      escapeCsv(r.bloco_3_dores?.p19_rtv?.porque),
+      escapeCsv(r.bloco_3_dores?.p19_rtv_assunto || r.bloco_3_dores?.p19_rtv?.assunto || r.bloco_3_dores?.p19_rtv?.avaliacao),
+      escapeCsv(r.bloco_3_dores?.p19_outro || r.bloco_3_dores?.p19_rtv?.outro || r.bloco_3_dores?.p19_rtv?.porque),
 
       escapeCsv(r.encerramentos?.p20_experiencia),
       escapeCsv(r.encerramentos?.p21_recrutamento),
